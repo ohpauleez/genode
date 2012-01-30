@@ -247,6 +247,12 @@ class Char_cell_array
 			_line_dirty[line] = false;
 		}
 
+		void mark_all_lines_as_dirty()
+		{
+			if (_num_lines > 0)
+				_mark_lines_as_dirty(0, _num_lines - 1);
+		}
+
 		void scroll_up(int region_start, int region_end)
 		{
 			_scroll_vertically(region_start, region_end, true);
@@ -786,6 +792,7 @@ namespace Terminal {
 	struct Flush_callback : Genode::List<Flush_callback>::Element
 	{
 		virtual void flush() = 0;
+		virtual void mode_changed() = 0;
 	};
 
 
@@ -806,13 +813,16 @@ namespace Terminal {
 			_list.remove(flush_callback);
 		}
 
-		void flush()
+		void invoke(void (Flush_callback::*func)())
 		{
 			Genode::Lock::Guard guard(_lock);
 			Flush_callback *curr = _list.first();
 			for (; curr; curr = curr->next())
-				curr->flush();
+				(curr->*func)();
 		}
+
+		void flush()        { invoke(&Flush_callback::flush); }
+		void mode_changed() { invoke(&Flush_callback::mode_changed); }
 	};
 
 
@@ -823,7 +833,6 @@ namespace Terminal {
 
 			Read_buffer                   *_read_buffer;
 			Framebuffer::Session          *_framebuffer;
-
 			Flush_callback_registry       &_flush_callback_registry;
 
 			Genode::Attached_ram_dataspace _io_buffer;
@@ -844,8 +853,7 @@ namespace Terminal {
 			Char_cell_array                  _char_cell_array;
 			Char_cell_array_character_screen _char_cell_array_character_screen;
 			Terminal::Decoder                _decoder;
-
-			Terminal::Position _last_cursor_pos;
+			Terminal::Position               _last_cursor_pos;
 
 			/**
 			 * Initialize framebuffer-related attributes
@@ -932,6 +940,30 @@ namespace Terminal {
 
 				_framebuffer->refresh(0, first_dirty_line*_char_height,
 				                      _fb_mode.width(), num_dirty_lines*_char_height);
+			}
+
+			void mode_changed()
+			{
+				Genode::Lock::Guard guard(_lock);
+
+				_framebuffer->release();
+				_fb_mode = _framebuffer->mode();
+				_fb_ds_cap = _init_fb();
+
+				/* compute number of characters fitting on the framebuffer */
+				_columns = _fb_mode.width()/_char_width,
+				_lines   = _fb_mode.height()/_char_height,
+
+				Genode::env()->rm_session()->detach(_fb_addr);
+				_fb_addr = Genode::env()->rm_session()->attach(_fb_ds_cap);
+
+				/*
+				 * XXX propagate new cell array constraint to _char_cell_array
+				 *
+				 * XXX propagate changed mode to terminal client
+				 */
+
+				_char_cell_array.mark_all_lines_as_dirty();
 			}
 
 
@@ -1406,6 +1438,13 @@ int main(int, char **)
 
 	static Scancode_tracker scancode_tracker(keymap, shift, altgr);
 
+	/*
+	 * Register signal handler for framebuffer mode changes
+	 */
+	Signal_receiver signal_receiver;
+	Signal_context  fb_mode_sig;
+	framebuffer.mode_sigh(signal_receiver.manage(&fb_mode_sig));
+
 	while (1) {
 
 		flush_callback_registry.flush();
@@ -1426,6 +1465,15 @@ int main(int, char **)
 
 					/* reset repeat counter according to repeat rate */
 					repeat_cnt = repeat_rate;
+				}
+			}
+
+			/* respond to framebuffer mode changes */
+			if (signal_receiver.pending()) {
+				Signal signal = signal_receiver.wait_for_signal();
+				if (signal.num() && (signal.context() == &fb_mode_sig)) {
+					flush_callback_registry.mode_changed();
+					flush_callback_registry.flush();
 				}
 			}
 		}
