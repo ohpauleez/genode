@@ -22,7 +22,7 @@ create_boot_directory
 # Config
 #
 set config  {
-<config>
+<config prio_levels="2">
 	<parent-provides>
 		<service name="ROM"/>
 		<service name="RAM"/>
@@ -39,20 +39,20 @@ set config  {
 	<default-route>
 		<any-service> <parent/> <any-child/> </any-service>
 	</default-route>
-	<start name="timer">
+	<start name="timer" priority="0">
 		<resource name="RAM" quantum="1M"/>
 		<provides><service name="Timer"/></provides>
 	</start>
-	<start name="fb_drv">
+	<start name="fb_drv" priority="-1">
 		<binary name="omap4_fb_drv"/>
 		<resource name="RAM" quantum="4M"/>
 		<provides><service name="Framebuffer"/></provides>
 	</start>
-	<start name="sd_card_drv">
+	<start name="sd_card_drv" priority="0">
 		<resource name="RAM" quantum="4M"/>
 		<provides><service name="Block"/></provides>
 	</start>
-	<start name="usb_drv">
+	<start name="usb_drv" priority="-1">
 		<resource name="RAM" quantum="4M"/>
 		<provides>
 			<service name="Input"/>
@@ -76,23 +76,23 @@ set config  {
 			<any-service> <parent/> <any-child/> </any-service>
 		</route>
 	</start>-->
-	<start name="nic_bridge">
+	<!--<start name="nic_bridge" priority="-1">
 		<resource name="RAM" quantum="2M"/>
 		<provides><service name="Nic"/></provides>
 		<route>
 			<service name="Nic"> <child name="usb_drv"/> </service>
 			<any-service> <parent/> <any-child/> </any-service>
 		</route>
-	</start>
-	<start name="vmlinux.1">
+	</start>-->
+	<start name="vmlinux.1" priority="-1">
 		<binary name="l4linux"/>
-		<resource name="RAM" quantum="96M"/>
-		<config args="mem=54M l4x_rd=initrd.gz">
+		<resource name="RAM" quantum="296M"/>
+		<config args="mem=254M l4x_rd=initrd.gz">
 			<block label="sda" />
 		</config>
 		<route>
 			<service name="Block"> <child name="sd_card_drv"/> </service>
-			<service name="Nic">   <child name="nic_bridge"/> </service>
+			<!--<service name="Nic">   <child name="nic_bridge"/> </service>-->
 			<any-service> <any-child/> <parent/> </any-service>
 		</route>
 	</start>
