@@ -413,8 +413,10 @@ namespace Init {
 			{
 				using namespace Genode;
 
+#if 0 /* quotaless */
 				if (_resources.ram_quota == 0)
 					PWRN("no valid RAM resource for child \"%s\"", _name.unique);
+#endif /* quotaless */
 
 				if (config_verbose) {
 					Genode::printf("child \"%s\"\n", _name.unique);

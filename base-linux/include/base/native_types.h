@@ -179,6 +179,13 @@ namespace Genode {
 			unsigned    uid()  const { return _uid;  }
 			unsigned    gid()  const { return _gid;  }
 	};
+
+#if 1 /* quotaless */
+	/*
+	 * Pseudo value representing unlimited quota.
+	 */
+	enum { QUOTALESS_MAX_QUOTA = ~0 };
+#endif /* quotaless */
 }
 
 #endif /* _INCLUDE__BASE__NATIVE_TYPES_H_ */

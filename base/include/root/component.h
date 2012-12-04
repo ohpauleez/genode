@@ -188,6 +188,13 @@ namespace Genode {
 				size_t ram_quota = Arg_string::find_arg(args.string(), "ram_quota").long_value(0);
 				size_t needed = sizeof(SESSION_TYPE) + md_alloc()->overhead(sizeof(SESSION_TYPE));
 
+#if 1 /* quotaless */
+				/*
+				 * Pretend the donation of an abundance of RAM.
+				 */
+				ram_quota = QUOTALESS_MAX_QUOTA;
+#endif /* quotaless */
+
 				if (needed > ram_quota) {
 					PERR("Insufficient ram quota, provided=%zd, required=%zd",
 					     ram_quota, needed);

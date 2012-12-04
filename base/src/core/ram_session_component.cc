@@ -65,6 +65,15 @@ int Ram_session_component::_transfer_quota(Ram_session_component *dst, size_t am
 	/* check if recipient is a valid Ram_session_component */
 	if (!dst) return -1;
 
+#if 1 /* quotaless */
+	/*
+	 * Pin quota to max.
+	 */
+	dst->_quota_limit = QUOTALESS_MAX_QUOTA;
+	_quota_limit      = QUOTALESS_MAX_QUOTA;
+	return 0;
+#endif /* quotaless */
+
 	/* check for reference account relationship */
 	if ((ref_account() != dst) && (dst->ref_account() != this))
 		return -3;
@@ -251,6 +260,13 @@ Ram_session_component::Ram_session_component(Rpc_entrypoint  *ds_ep,
 	_ds_slab(&_md_alloc), _ref_account(0)
 {
 	Arg_string::find_arg(args, "label").string(_label, sizeof(_label), "");
+
+#if 1 /* quotaless */
+	/*
+	 * Pin quota to max.
+	 */
+	_quota_limit = QUOTALESS_MAX_QUOTA;
+#endif
 }
 
 
