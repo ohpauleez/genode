@@ -177,7 +177,10 @@ class Window_content : public Element
 		Fb_texture                       *_fb;
 		unsigned                          _new_w, _new_h;
 		Genode::Signal_context_capability _mode_sigh;
+<<<<<<< Updated upstream
 		bool                              _wait_for_refresh;
+=======
+>>>>>>> Stashed changes
 
 	public:
 
@@ -187,6 +190,7 @@ class Window_content : public Element
 			_config_alpha(config_alpha),
 			_ev_handler(ev_queue, this, _lock),
 			_fb(new (Genode::env()->heap()) Fb_texture(fb_w, fb_h, _config_alpha)),
+<<<<<<< Updated upstream
 			_new_w(fb_w), _new_h(fb_h),
 			_wait_for_refresh(false)
 		{
@@ -243,6 +247,54 @@ class Window_content : public Element
 		}
 
 		void client_called_refresh() { _wait_for_refresh = false; }
+=======
+			_new_w(fb_w), _new_h(fb_h)
+		{
+			_min_w = _fb->w;
+			_min_h = _fb->h;
+
+			event_handler(&_ev_handler);
+		}
+
+		/*
+		 * Accessors, called by the RPC entrypoint. Hence, the need for
+		 * locking.
+		 */
+
+		Genode::Dataspace_capability fb_ds_cap() {
+			Genode::Lock::Guard guard(_lock);
+			return _fb->ds.cap();
+		}
+
+		unsigned fb_w() {
+			Genode::Lock::Guard guard(_lock);
+			return _fb->w;
+		}
+		unsigned fb_h() {
+			Genode::Lock::Guard guard(_lock);
+			return _fb->h;
+		}
+
+		void mode_sigh(Genode::Signal_context_capability sigh)
+		{
+			Genode::Lock::Guard guard(_lock);
+			_mode_sigh = sigh;
+		}
+
+		void realloc_framebuffer()
+		{
+			Genode::Lock::Guard guard(_lock);
+
+			/* skip reallocation if size has not changed */
+			if (_new_w == _fb->w && _new_h == _fb->h)
+				return;
+
+			Genode::destroy(Genode::env()->heap(), _fb);
+
+			_fb = new (Genode::env()->heap())
+			      Fb_texture(_new_w, _new_h, _config_alpha);
+		}
+>>>>>>> Stashed changes
 
 		/**
 		 * Element interface
@@ -252,8 +304,12 @@ class Window_content : public Element
 		 */
 		void draw(Canvas *c, int x, int y)
 		{
+<<<<<<< Updated upstream
 			if (!_wait_for_refresh)
 				c->draw_texture(&_fb->texture, _x + x, _y + y);
+=======
+			c->draw_texture(&_fb->texture, _x + x, _y + y);
+>>>>>>> Stashed changes
 		}
 
 		void format_fixed_size(int w, int h)
@@ -274,7 +330,11 @@ static Window_content *_window_content;
 
 Element *window_content() { return _window_content; }
 
+<<<<<<< Updated upstream
 void   lock_window_content() { _window_content->lock(); }
+=======
+void lock_window_content() { _window_content->lock(); }
+>>>>>>> Stashed changes
 void unlock_window_content() { _window_content->unlock(); }
 
 
@@ -310,11 +370,16 @@ namespace Framebuffer
 			void mode_sigh(Genode::Signal_context_capability sigh) {
 				_window_content.mode_sigh(sigh); }
 
+<<<<<<< Updated upstream
 			void refresh(int x, int y, int w, int h)
 			{
 				_window_content.client_called_refresh();
 				_window_content.redraw_area(x, y, w, h);
 			}
+=======
+			void refresh(int x, int y, int w, int h) {
+				_window_content.redraw_area(x, y, w, h); }
+>>>>>>> Stashed changes
 	};
 
 

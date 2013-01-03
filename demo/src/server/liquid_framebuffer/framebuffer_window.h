@@ -94,10 +94,16 @@ class Framebuffer_window : public Window
 			_titlebar.geometry(1, y, _titlebar.min_w(), _titlebar.min_h());
 			y += _titlebar.min_h();
 
+<<<<<<< Updated upstream
 			int const content_h = (h > y + 1) ? (h - y - 1) : 0;
 			int const content_w = w - 2;
 			_content->format_fixed_size(content_w, content_h);
 			_content->geometry(1, y, content_w, content_h);
+=======
+			int const content_h = h > y ? h - y : 0;
+			_content->format_fixed_size(w, content_h);
+			_content->geometry(1, y, w - 2, content_h);
+>>>>>>> Stashed changes
 
 			_sizer.geometry(_w - 32, _h - 32, 32, 32);
 
