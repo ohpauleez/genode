@@ -175,6 +175,9 @@ static void convert_png_to_rgb565(void *png_data,
 		curr_row_size = needed_row_size;
 	}
 
+	for (int j = 0; j < 10; j++)
+		png_read_row(png_ptr, row_ptr, NULL);
+
 	/* fill texture */
 	int dst_y = 0;
 	for (int j = 0; j < min((int)img_h, dst_h); j++, dst_y++) {
