@@ -494,7 +494,7 @@ void Rm_session_component::detach(Local_addr local_addr)
 	Rm_region *region = _map.metadata(local_addr);
 
 	if (!region) {
-		PDBG("no attachment at %p", (void *)local_addr);
+//		PDBG("no attachment at %p", (void *)local_addr);
 		return;
 	}
 
