@@ -288,12 +288,12 @@ int main(int argc, char **argv)
 	 * Always announce 'Nic' service, throw 'Unavailable' during session
 	 * request if no appropriate driver could be found.
 	 */
-	static Rpc_entrypoint nic_ep(&cap, STACK_SIZE, "nic_slave");
-	static Ipxe_policy    nic_policy(nic_ep);
-	static Genode::Slave  nic_slave(nic_ep, nic_policy, 2048 * 1024);
-
-	static Nic::Root nic_root(nic_policy);
-	env()->parent()->announce(ep.manage(&nic_root));
+//	static Rpc_entrypoint nic_ep(&cap, STACK_SIZE, "nic_slave");
+//	static Ipxe_policy    nic_policy(nic_ep);
+//	static Genode::Slave  nic_slave(nic_ep, nic_policy, 2048 * 1024);
+//
+//	static Nic::Root nic_root(nic_policy);
+//	env()->parent()->announce(ep.manage(&nic_root));
 
 	/*
 	 * Announce 'Block' service
