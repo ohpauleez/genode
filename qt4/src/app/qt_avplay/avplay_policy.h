@@ -100,6 +100,9 @@ class Avplay_policy : public QObject, public Genode::Slave_policy
 				return _framebuffer_in.wait_for_service(service_name, &client, name());
 			}
 
+			if (strcmp(service_name, "Audio_out") == 0)
+				return 0;
+
 			return Slave_policy::resolve_session_request(service_name, args);
 		}
 
