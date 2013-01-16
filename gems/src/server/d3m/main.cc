@@ -90,7 +90,7 @@ struct Ps2_policy : public Genode::Slave_policy
 		char const **_permitted_services() const
 		{
 			static char const *allowed_services[] = {
-				"CAP", "RM", "IO_PORT", "IRQ", "LOG", 0 };
+				"CAP", "RM", "IO_PORT", "IRQ", "LOG", "CPU", 0 };
 
 			return allowed_services;
 		};
@@ -135,7 +135,7 @@ struct Usb_policy : public Genode::Slave_policy
 		{
 			static const char *permitted_services[] = {
 				"CAP", "RM", "IO_PORT", "IO_MEM", "IRQ", "LOG", "PCI",
-				"Timer", "SIGNAL", 0 };
+				"Timer", "SIGNAL", "CPU", 0 };
 
 			return permitted_services;
 		};
@@ -190,7 +190,7 @@ class Atapi_policy : public Genode::Slave_policy
 		{
 			static const char *permitted_services[] = {
 				"CAP", "RM", "LOG", "SIGNAL", "Timer", "PCI", "IO_MEM",
-				"IO_PORT", "IRQ", 0 };
+				"IO_PORT", "IRQ", "CPU", 0 };
 
 			return permitted_services;
 		};
@@ -251,7 +251,7 @@ int main(int argc, char **argv)
 	static Usb_policy     usb_policy(usb_ep, input_source_registry,
 	                                 block_driver_registry, env()->ram_session(),
 	                                 config);
-	static Genode::Slave  usb_slave(usb_ep, usb_policy, 3*1024*1024);
+	static Genode::Slave  usb_slave(usb_ep, usb_policy, 12*1024*1024);
 
 	/* create ATAPI driver */
 	static Rpc_entrypoint atapi_ep(&cap, STACK_SIZE, "atapi_slave");

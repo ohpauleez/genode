@@ -79,7 +79,7 @@ class Iso9660_boot_probe
 		const char **_permitted_services() const
 		{
 			static const char *permitted_services[] = {
-				"CAP", "RM", "LOG", "SIGNAL", 0 };
+				"CAP", "RM", "LOG", "SIGNAL", "CPU", 0 };
 			return permitted_services;
 		};
 
