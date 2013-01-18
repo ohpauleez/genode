@@ -82,9 +82,9 @@ namespace Genode {
 			/**
 			 * Remove element from list
 			 */
-			void remove(LT const *le)
+			bool remove(LT const *le)
 			{
-				if (!_first) return;
+				if (!_first) return false;
 
 				/* if specified element is the first of the list */
 				if (le == _first) {
@@ -98,13 +98,15 @@ namespace Genode {
 						e = e->_next;
 
 					/* element is not member of the list */
-					if (!e->_next) return;
+					if (!e->_next) return false;
 
 					/* e->_next is the element to remove, skip it in list */
 					e->Element::_next = e->Element::_next->Element::_next;
 				}
 
 				le->Element::_next = 0;
+
+				return true;
 			}
 	};
 

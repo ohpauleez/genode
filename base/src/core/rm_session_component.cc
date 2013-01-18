@@ -485,7 +485,7 @@ static void unmap_managed(Rm_session_component *session, Rm_region *region, int 
 }
 
 
-void Rm_session_component::detach(Local_addr local_addr)
+void Rm_session_component::_detach(Local_addr local_addr, bool force_region_removal)
 {
 	/* serialize access */
 	Lock::Guard lock_guard(_lock);
@@ -508,7 +508,7 @@ void Rm_session_component::detach(Local_addr local_addr)
 		     region->base(), region->base() + region->size());
 
 	/* inform dataspace about detachment */
-	dsc->detached_from(region);
+	bool removal_succeeded = dsc->detached_from(region);
 
 	/*
 	 * Deallocate region on platforms that support unmap
@@ -521,7 +521,7 @@ void Rm_session_component::detach(Local_addr local_addr)
 	 * make sure that page faults occurring immediately after the unmap
 	 * refer to an empty region not to the dataspace, which we just removed.
 	 */
-	if (platform()->supports_unmap())
+	if (platform()->supports_unmap() && (removal_succeeded || force_region_removal))
 		_map.free(local_addr);
 
 	/*
@@ -595,7 +595,7 @@ void Rm_session_component::detach(Local_addr local_addr)
 	for (; p; p = p->next())
 		if (p->region() == region) break;
 
-	if (p) {
+	if (p && (removal_succeeded || force_region_removal)) {
 		_regions.remove(p);
 		destroy(&_ref_slab, p);
 	}
