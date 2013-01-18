@@ -354,13 +354,23 @@ namespace Genode {
 			 */
 			void upgrade_ram_quota(size_t ram_quota) { _md_alloc.upgrade(ram_quota); }
 
+			/*
+			 * Detach implementation.
+			 *
+			 * The memory of the internal Rm_region structure belonging to the
+			 * local address will be only freed if and only if the Rm_region
+			 * could be removed from the dataspace it was belonging to.
+			 *
+			 * \param force_rm_region_removal - ignore described restriction
+			 */
+			void _detach(Local_addr, bool force_rm_region_removal = false);
 
 			/**************************************
 			 ** Region manager session interface **
 			 **************************************/
 
 			Local_addr       attach        (Dataspace_capability, size_t, off_t, bool, Local_addr, bool);
-			void             detach        (Local_addr);
+			void             detach        (Local_addr addr) { _detach(addr); }
 			Pager_capability add_client    (Thread_capability);
 			void             remove_client (Pager_capability);
 			void             fault_handler (Signal_context_capability handler);
