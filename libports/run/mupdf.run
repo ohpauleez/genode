@@ -1,7 +1,7 @@
 build {
 	core init
 	drivers/timer
-	app/mupdf
+	app/mupdf server/nitpicker
 	drivers/framebuffer drivers/pci drivers/input
 }
 
@@ -59,8 +59,15 @@ append config {
 		<resource name="RAM" quantum="1M"/>
 		<provides><service name="Timer"/></provides>
 	</start>
+	<start name="nitpicker">
+		<resource name="RAM" quantum="1M"/>
+		<provides><service name="Nitpicker"/></provides>
+	</start>
 	<start name="mupdf">
 		<resource name="RAM" quantum="1G"/>
+		<config>
+			<pdf name="test.pdf" />
+		</config>
 	</start>
 </config>
 }
@@ -82,7 +89,7 @@ if {![file exist bin/test.pdf]} {
 
 set boot_modules {
 	core init ld.lib.so timer
-	mupdf
+	mupdf nitpicker
 	libc.lib.so libm.lib.so libc_log.lib.so libc_rom.lib.so
 	openjpeg.lib.so freetype.lib.so libpng.lib.so zlib.lib.so jbig2dec.lib.so
 	mupdf.lib.so jpeg.lib.so
