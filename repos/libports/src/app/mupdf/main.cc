@@ -12,12 +12,14 @@
  */
 
 /* Genode includes */
-#include <framebuffer_session/connection.h>
+#include <nitpicker_session/connection.h>
+#include <framebuffer_session/client.h>
 #include <base/sleep.h>
-#include <input_session/connection.h>
+#include <input_session/client.h>
 #include <input/event.h>
 #include <input/keycodes.h>
 #include <timer_session/connection.h>
+#include <os/config.h>
 
 /* MuPDF includes */
 extern "C" {
@@ -117,20 +119,20 @@ class Pdf_view
 
 	private:
 
-		struct _Framebuffer : Framebuffer::Connection
+		struct _Framebuffer
 		{
 			typedef uint16_t pixel_t;
 
-			Framebuffer::Mode mode;
-			pixel_t          *base;
+			Framebuffer::Session &session;
+			Framebuffer::Mode     mode;
+			pixel_t              *base;
 
-			_Framebuffer()
+			_Framebuffer(Framebuffer::Session &framebuffer)
 			:
-				mode(Framebuffer::Connection::mode()),
-				base(Genode::env()->rm_session()->attach(dataspace()))
+				session(framebuffer),
+				mode(framebuffer.mode()),
+				base(Genode::env()->rm_session()->attach(framebuffer.dataspace()))
 			{
-				PDBG("Framebuffer is %dx%d\n", mode.width(), mode.height());
-
 				if (mode.format() != Framebuffer::Mode::RGB565) {
 					PERR("Color modes other than RGB565 are not supported. Exiting.");
 					throw Non_supported_framebuffer_mode();
@@ -149,13 +151,15 @@ class Pdf_view
 		 * \throw Invalid_input_file_name
 		 * \throw Unexpected_document_color_depth
 		 */
-		Pdf_view(char const *file_name)
+		Pdf_view(char const *file_name, Framebuffer::Session &framebuffer)
+		:
+			_framebuffer(framebuffer)
 		{
 			pdfapp_init(&_pdfapp);
 			_pdfapp.userdata = this;
 			_pdfapp.scrw       = _framebuffer.mode.width();
 			_pdfapp.scrh       = _framebuffer.mode.height();
-			_pdfapp.resolution = 75;   /* XXX read from config */
+			_pdfapp.resolution = 202;   /* XXX read from config */
 			_pdfapp.pageno     = 0;    /* XXX read from config */
 
 			int fd = open(file_name, O_BINARY | O_RDONLY, 0666);
@@ -183,22 +187,25 @@ class Pdf_view
 
 void Pdf_view::show()
 {
+	enum { Y_OFFSET = 11 };
 	int const x_max = Genode::min(_framebuffer.mode.width(),  _pdfapp.image->w);
-	int const y_max = Genode::min(_framebuffer.mode.height(), _pdfapp.image->h);
+	int const y_max = Genode::min(_framebuffer.mode.height(), _pdfapp.image->h - Y_OFFSET);
 
 	Genode::size_t src_line_bytes   = _pdfapp.image->n * _pdfapp.image->w;
 	unsigned char *src_line         = _pdfapp.image->samples;
+
+	src_line += src_line_bytes*Y_OFFSET;
 
 	Genode::size_t dst_line_width   = _framebuffer.mode.width(); /* in pixels */
 	_Framebuffer::pixel_t *dst_line = _framebuffer.base;
 
 	for (int y = 0; y < y_max; y++) {
-		convert_line_rgba_to_rgb565(src_line, dst_line, x_max, y);
+		convert_line_rgba_to_rgb565(src_line, dst_line + 3, x_max - 2, y);
 		src_line += src_line_bytes;
 		dst_line += dst_line_width;
 	}
 
-	_framebuffer.refresh(0, 0, _framebuffer.mode.width(), _framebuffer.mode.height());
+	_framebuffer.session.refresh(0, 0, _framebuffer.mode.width(), _framebuffer.mode.height());
 }
 
 
@@ -214,22 +221,13 @@ extern "C" void _sigprocmask()
 
 void winrepaint(pdfapp_t *pdfapp)
 {
-	PDBG("called");
 	Pdf_view *pdf_view = (Pdf_view *)pdfapp->userdata;
 	pdf_view->show();
 }
 
 
-void winrepaintsearch(pdfapp_t *)
-{
-	PDBG("not implemented");
-}
-
-
-void wincursor(pdfapp_t *, int curs)
-{
-	PDBG("curs=%d - not implemented", curs);
-}
+void winrepaintsearch(pdfapp_t *) { }
+void wincursor(pdfapp_t *, int curs) { }
 
 
 void winerror(pdfapp_t *, fz_error error)
@@ -239,47 +237,20 @@ void winerror(pdfapp_t *, fz_error error)
 }
 
 
-void winwarn(pdfapp_t *, char *msg)
-{
-	PWRN("MuPDF: %s", msg);
-}
-
-
-void winhelp(pdfapp_t *)
-{
-	PDBG("not implemented");
-}
+void winwarn(pdfapp_t *, char *msg) { }
+void winhelp(pdfapp_t *) { }
 
 
 char *winpassword(pdfapp_t *, char *)
 {
-	PDBG("not implemented");
 	return NULL;
 }
 
 
-void winclose(pdfapp_t *app)
-{
-	PDBG("not implemented");
-}
-
-
-void winreloadfile(pdfapp_t *)
-{
-	PDBG("not implemented");
-}
-
-
-void wintitle(pdfapp_t *app, char *s)
-{
-	PDBG("s=\"%s\" - not implemented", s);
-}
-
-
-void winresize(pdfapp_t *app, int w, int h)
-{
-	PDBG("not implemented, w=%d, h=%d", w, h);
-}
+void winclose(pdfapp_t *app) { }
+void winreloadfile(pdfapp_t *) { }
+void wintitle(pdfapp_t *app, char *s) { }
+void winresize(pdfapp_t *pdfapp, int w, int h) { }
 
 
 /******************
@@ -289,10 +260,10 @@ void winresize(pdfapp_t *app, int w, int h)
 static int keycode_to_ascii(int code)
 {
 	switch (code) {
-	case Input::KEY_LEFT:      return 'h';
-	case Input::KEY_RIGHT:     return 'l';
-	case Input::KEY_DOWN:      return 'j';
-	case Input::KEY_UP:        return 'k';
+	case Input::KEY_LEFT:      return 'b';
+	case Input::KEY_RIGHT:     return ' ';
+	case Input::KEY_DOWN:      return '<';
+	case Input::KEY_UP:        return '>';
 	case Input::KEY_PAGEDOWN:
 	case Input::KEY_ENTER:     return ' ';
 	case Input::KEY_PAGEUP:
@@ -304,21 +275,81 @@ static int keycode_to_ascii(int code)
 
 int main(int, char **)
 {
-	char const *file_name = "test.pdf"; /* XXX read from config */
+	enum { MAX_FILE_NAME_LEN = 64 };
+	char file_name[MAX_FILE_NAME_LEN];
+	try {
+		file_name[0] = 0;
+		Genode::config()->xml_node().sub_node("pdf").attribute("name")
+			.value(file_name, sizeof(file_name));
+	} catch (...) {
+		PERR("could not obtain PDF file name from config");
+		return -1;
+	}
 
-	static Pdf_view pdf_view(file_name);
+	unsigned long view_width = 1024, view_height = 768 - 16;
 
-	static Input::Connection input;
+	static Nitpicker::Connection nitpicker;
+
+	/* obtain framebuffer mode */
+	Framebuffer::Mode const nitpicker_mode = nitpicker.mode();
+	if (nitpicker_mode.format() != Framebuffer::Mode::RGB565) {
+		printf("Error: Color mode %d not supported\n", (int)nitpicker_mode.format());
+		return -3;
+	}
+
+	Framebuffer::Mode const fb_mode(view_width, view_height + 1, nitpicker_mode.format());
+	nitpicker.buffer(fb_mode, false);
+
+	static Framebuffer::Session_client framebuffer(nitpicker.framebuffer_session());
+	static Nitpicker::Session::View_handle view_handle = nitpicker.create_view();
+
+	static Pdf_view pdf_view(file_name, framebuffer);
+
+	using namespace Nitpicker;
+	typedef Nitpicker::Session::Command Command;
+
+	/* display view */
+	const unsigned MINI_X = 0, MINI_Y = fb_mode.height() - 4, MINI_W = 5, MINI_H = 5;
+
+	Nitpicker::Rect rect(Nitpicker::Point(MINI_X, MINI_Y),
+	                     Nitpicker::Area(MINI_W, MINI_H));
+	nitpicker.enqueue<Command::Geometry>(view_handle, rect);
+	nitpicker.enqueue<Command::To_front>(view_handle);
+	nitpicker.execute();
+
+	framebuffer.refresh(0, 0, fb_mode.width(), fb_mode.height());
+
 	static Timer::Connection timer;
+	static Input::Session_client input(nitpicker.input_session());
 
-	Input::Event *ev_buf = Genode::env()->rm_session()->attach(input.dataspace());
+	static Input::Event *ev_buf = Genode::env()->rm_session()->attach(input.dataspace());
+
 	int key_cnt = 0;
+
+	{
+		nitpicker.enqueue<Command::To_front>(view_handle);
+		nitpicker.execute();
+
+		unsigned const native_width  = nitpicker_mode.width(),
+		               native_height = nitpicker_mode.height();
+		unsigned const pad_x = native_width == 1600 ? 4 : 0;
+		unsigned const x = (native_width  - view_width)  / 2,
+		               y = (native_height - view_height) / 2;
+
+		Nitpicker::Rect rect(Nitpicker::Point(x + pad_x, y),
+		                     Nitpicker::Area(view_width - 2*pad_x,
+		                                     view_height));
+		nitpicker.enqueue<Command::Geometry>(view_handle, rect);
+		nitpicker.execute();
+	}
 
 	/*
 	 * Input event loop
 	 */
 	for (;;) {
-		while (!input.is_pending()) timer.msleep(20);
+		while (!input.is_pending()) {
+			timer.msleep(20);
+		}
 
 		for (int i = 0, num_ev = input.flush(); i < num_ev; i++) {
 
@@ -329,11 +360,40 @@ int main(int, char **)
 
 			if (ev.type() == Input::Event::PRESS && key_cnt == 1) {
 
-				PDBG("key %d pressed", ev.code());
+				switch (ev.code()) {
+				case Input::KEY_ESC:
+					{
+						Nitpicker::Rect rect(Nitpicker::Point(MINI_X, MINI_Y),
+						                     Nitpicker::Area(MINI_W, MINI_H));
+						nitpicker.enqueue<Command::Geometry>(view_handle, rect);
+						nitpicker.execute();
+					}
+					break;
+				case Input::BTN_LEFT:
+					{
+						nitpicker.enqueue<Command::To_front>(view_handle);
+						nitpicker.execute();
 
-				int const ascii = keycode_to_ascii(ev.code());
-				if (ascii)
-					pdf_view.handle_key(ascii);
+						unsigned const native_width  = nitpicker_mode.width(),
+						               native_height = nitpicker_mode.height();
+						unsigned const pad_x = native_width == 1600 ? 4 : 0;
+						unsigned const x = (native_width  - view_width)  / 2,
+						               y = (native_height - view_height) / 2;
+
+						Nitpicker::Rect rect(Nitpicker::Point(x + pad_x, y),
+						                     Nitpicker::Area(view_width - 2*pad_x,
+						                                     view_height));
+						nitpicker.enqueue<Command::Geometry>(view_handle, rect);
+						nitpicker.execute();
+					}
+					break;
+				default:
+					{
+						int const ascii = keycode_to_ascii(ev.code());
+						if (ascii)
+							pdf_view.handle_key(ascii);
+					}
+				}
 			}
 		}
 	}
