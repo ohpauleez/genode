@@ -53,7 +53,7 @@ $(REP_DIR)/contrib:
 $(BUILD_BASE_DIR)/l4/.kconfig: $(REP_DIR)/contrib
 	$(VERBOSE_MK) MAKEFLAGS= $(MAKE) $(VERBOSE_DIR) -C $(REP_DIR)/contrib/l4 B=$(dir $@) \
 	     DROPSCONF_DEFCONFIG="$(L4_CONFIG)" \
-	     VERBOSE="$(VERBOSE)" SYSTEM_TARGET="$(CROSS_DEV_PREFIX)"
+	     VERBOSE="$(VERBOSE)" SYSTEM_TARGET="$(CROSS_DEV_PREFIX)" || true
 
 PKGS = ldscripts \
        libgcc-pure \

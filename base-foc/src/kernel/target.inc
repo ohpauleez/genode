@@ -14,7 +14,7 @@ $(FOC_BUILD_DIR):
 
 $(FIASCO): $(FOC_BUILD_DIR)
 	$(VERBOSE_MK) $(MAKE) SYSTEM_TARGET="$(CROSS_DEV_PREFIX)" \
-                          CC="$(CC)" CXX="$(CXX)" \
+                          CC="ccache $(CC)" CXX="ccache $(CXX)" \
                           $(VERBOSE_DIR) -C $(FOC_BUILD_DIR)
 	$(VERBOSE)ln -sf $@ $(BUILD_BASE_DIR)/bin/$(TARGET)
 
