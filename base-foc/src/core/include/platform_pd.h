@@ -46,7 +46,7 @@ namespace Genode {
 				UTCB_AREA_SIZE  = (THREAD_MAX * Fiasco::L4_UTCB_OFFSET),
 			};
 
-			addr_t utcb_area_start()
+			addr_t non_core_utcb_area_start()
 			{
 				return (Native_config::context_area_virtual_base() +
 				       THREAD_MAX * Native_config::context_virtual_size());
@@ -110,11 +110,7 @@ namespace Genode {
 			 ** Address-space interface **
 			 *****************************/
 
-			/*
-			 * On Fiasco.OC, we don't use directed unmap but rely on the
-			 * in-kernel mapping database. See 'rm_session_support.cc'.
-			 */
-			void flush(addr_t, size_t) { PDBG("not implemented"); }
+			void flush(addr_t, size_t);
 	};
 }
 

@@ -40,8 +40,8 @@ void Thread_base::start()
 	using namespace Fiasco;
 
 	/* create and start platform thread */
-	Platform_thread *pt =
-		new(platform()->core_mem_alloc()) Platform_thread(_context->name);
+	Platform_thread *pt = new(platform()->core_mem_alloc())
+		Platform_thread(_context->name, 0, true);
 
 	platform_specific()->core_pd()->bind_thread(pt);
 	_tid = pt->gate().remote;

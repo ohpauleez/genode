@@ -31,32 +31,28 @@ using namespace Fiasco;
 using namespace Genode;
 
 
-static addr_t core_utcb_base() {
-	static addr_t base = (addr_t) l4_utcb();
-	return base;
-}
-
-
-/***************************
- ** Public object members **
- ***************************/
-
 int Platform_pd::bind_thread(Platform_thread *thread)
 {
 	for (unsigned i = 0; i < THREAD_MAX; i++) {
 		if (_threads[i])
 			continue;
 
-		_threads[i]                = thread;
-		if (thread->core_thread())
-			thread->_utcb = (l4_utcb_t*) (core_utcb_base() + i * L4_UTCB_OFFSET);
-		else
-			thread->_utcb =
-				reinterpret_cast<l4_utcb_t*>(utcb_area_start() + i * L4_UTCB_OFFSET);
-		Native_thread cap_offset   = THREADS_BASE_CAP + i * THREAD_CAP_SLOT;
-		thread->_gate.remote   = cap_offset + THREAD_GATE_CAP;
-		thread->_pager.remote  = cap_offset + THREAD_PAGER_CAP;
-		thread->_irq.remote    = cap_offset + THREAD_IRQ_CAP;
+		_threads[i] = thread;
+
+		Native_thread cap_offset = -1;
+		if (thread->core_thread()) {
+			thread->_utcb = (l4_utcb_t*) (Platform::core_utcb_area_start()
+			              + i*L4_UTCB_OFFSET);
+			cap_offset    = FIRST_FREE_CORE_THREAD_CAP + i*THREAD_CAP_SLOT;
+		} else {
+			thread->_utcb = (l4_utcb_t*)(non_core_utcb_area_start()
+			              + i*L4_UTCB_OFFSET);
+			cap_offset    = MAIN_THREAD_CAP + i*THREAD_CAP_SLOT;
+		}
+
+		thread->_gate.remote  = cap_offset + THREAD_GATE_CAP;
+		thread->_pager.remote = cap_offset + THREAD_PAGER_CAP;
+		thread->_irq.remote   = cap_offset + THREAD_IRQ_CAP;
 
 		/* if it's no core-thread we have to map parent and pager gate cap */
 		if (!thread->core_thread()) {
@@ -96,6 +92,22 @@ int Platform_pd::assign_parent(Native_capability parent)
 }
 
 
+void Platform_pd::flush(addr_t virt_addr, size_t size)
+{
+	unsigned task = _task.local.dst();
+
+	/* sanitize arguments */
+	virt_addr &= get_page_mask();
+	size      &= get_page_mask();
+
+	for (; size > 0; virt_addr += get_page_size(), size -= get_page_size()) {
+		l4_task_unmap(task,
+		              l4_fpage(virt_addr, get_page_size_log2(), L4_FPAGE_RW),
+		              L4_FP_ALL_SPACES);
+	}
+}
+
+
 Platform_pd::Platform_pd(Core_cap_index* i)
 : _task(Native_capability(i), TASK_CAP)
 {
@@ -110,7 +122,7 @@ Platform_pd::Platform_pd()
 	for (unsigned i = 0; i < THREAD_MAX; i++)
 		_threads[i] = (Platform_thread*) 0;
 
-	l4_fpage_t utcb_area = l4_fpage(utcb_area_start(),
+	l4_fpage_t utcb_area = l4_fpage(non_core_utcb_area_start(),
 	                                log2<unsigned>(UTCB_AREA_SIZE), 0);
 	l4_msgtag_t tag = l4_factory_create_task(L4_BASE_FACTORY_CAP,
 	                                         _task.local.dst(), utcb_area);
@@ -121,8 +133,9 @@ Platform_pd::Platform_pd()
 
 Platform_pd::~Platform_pd()
 {
-	for (unsigned i = 0; i < THREAD_MAX; i++) {
+	Address_space::lock_for_destruction();
+
+	for (unsigned i = 0; i < THREAD_MAX; i++)
 		if (_threads[i])
 			_threads[i]->unbind();
-	}
 }

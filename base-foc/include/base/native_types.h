@@ -19,7 +19,13 @@ namespace Fiasco {
 		THREAD_PAGER_CAP = 0x1UL   << L4_CAP_SHIFT,
 		THREAD_IRQ_CAP   = 0x2UL   << L4_CAP_SHIFT,
 		THREAD_CAP_SLOT  = THREAD_IRQ_CAP + L4_CAP_SIZE,
-		MAIN_THREAD_CAP  = THREADS_BASE_CAP + THREAD_GATE_CAP
+
+		/*
+		 * XXX Move the following definitions to core
+		 */
+		MAIN_THREAD_CAP            = THREADS_BASE_CAP + 0*THREAD_CAP_SLOT,
+		CORE_PAGER_THREAD_CAP      = THREADS_BASE_CAP + 1*THREAD_CAP_SLOT,
+		FIRST_FREE_CORE_THREAD_CAP = THREADS_BASE_CAP + 2*THREAD_CAP_SLOT
 	};
 
 	enum Utcb_regs {
@@ -32,8 +38,8 @@ namespace Fiasco {
 		static bool valid(l4_cap_idx_t idx) {
 			return !(idx & L4_INVALID_CAP_BIT) && idx != 0; }
 	};
-
 }
+
 
 namespace Genode {
 

@@ -2,6 +2,7 @@
  * \brief  Fiasco platform interface implementation
  * \author Christian Helmuth
  * \author Stefan Kalkowski
+ * \author Norman Feske
  * \date   2006-04-11
  */
 
@@ -25,6 +26,7 @@
 #include <platform_thread.h>
 #include <platform_pd.h>
 #include <util.h>
+#include <map_local.h>
 #include <multiboot.h>
 
 /* Fiasco includes */
@@ -35,6 +37,10 @@ namespace Fiasco {
 #include <l4/sys/thread.h>
 #include <l4/sys/types.h>
 #include <l4/sys/utcb.h>
+#include <l4/sys/debugger.h>
+#include <l4/sys/factory.h>
+#include <l4/sys/irq.h>
+#include <l4/sys/scheduler.h>
 
 static l4_kernel_info_t *kip;
 }
@@ -43,126 +49,170 @@ using namespace Genode;
 
 
 static const bool verbose              = true;
-static const bool verbose_core_pf      = false;
+static const bool verbose_core_pf      = true;
 static const bool verbose_region_alloc = false;
 
 
-/***********************************
- ** Core address space management **
- ***********************************/
+/****************************************
+ ** Support for core memory management **
+ ****************************************/
 
-static Synchronized_range_allocator<Allocator_avl> &_core_address_ranges()
+bool Core_mem_allocator::Mapped_mem_allocator::_map_local(addr_t   virt_addr,
+                                                          addr_t   phys_addr,
+                                                          unsigned size)
 {
-	static Synchronized_range_allocator<Allocator_avl> _core_address_ranges(0);
-	return _core_address_ranges;
+	return map_local(phys_addr, virt_addr, size >> get_page_size_log2());
 }
 
-enum { PAGER_STACK_ELEMENTS = 1024 };
-static unsigned long _core_pager_stack[PAGER_STACK_ELEMENTS];
 
-/**
- * Core pager "service loop"
- */
-static void _core_pager_loop()
+/****************
+ ** Core pager **
+ ****************/
+
+class Core_pager : public Pager_object
+{
+	private:
+
+		enum { STACK_SIZE         = sizeof(addr_t)*1024,
+		       STACK_NUM_ELEMENTS = STACK_SIZE / sizeof(long) };
+
+		long _stack[STACK_NUM_ELEMENTS];
+
+		static void _entry();
+
+		Core_pager();
+
+	public:
+
+		/**
+		 * Return singleton instance of core pager
+		 */
+		static Core_pager *core_pager();
+
+		/**
+		 * Pager_object interface
+		 */
+		int pager(Ipc_pager &ps) { /* never called */ return -1; }
+};
+
+
+void Core_pager::_entry()
 {
 	using namespace Fiasco;
 
-	bool send_reply = false;
-	l4_umword_t  label;
-	l4_utcb_t   *utcb    = l4_utcb();
-	l4_msgtag_t  snd_tag = l4_msgtag(0, 0, 0, 0);
-	l4_msgtag_t  tag;
+	l4_umword_t label;
+	l4_msgtag_t request_tag;
 
 	while (true) {
 
-		if (send_reply)
-			tag = l4_ipc_reply_and_wait(utcb, snd_tag, &label, L4_IPC_NEVER);
-		else
-			tag = l4_ipc_wait(utcb, &label, L4_IPC_NEVER);
+		request_tag = l4_ipc_wait(l4_utcb(), &label, L4_IPC_NEVER);
 
-		if (!tag.is_page_fault()) {
-			PWRN("Received something different than a pagefault, ignoring ...");
+		int ipc_error = l4_ipc_error(request_tag, l4_utcb());
+		if (ipc_error) {
+			PERR("core_pager: IPC error %d", ipc_error);
 			continue;
 		}
 
-		/* read fault information */
-		l4_umword_t pfa = l4_trunc_page(l4_utcb_mr()->mr[0]);
-		l4_umword_t ip  = l4_utcb_mr()->mr[1];
-		bool rw         = l4_utcb_mr()->mr[0] & 2; //TODO enum
+		if (request_tag.is_page_fault()) {
 
-		if (pfa < (l4_umword_t)L4_PAGESIZE) {
+			/* read fault information */
+			l4_umword_t pfa = l4_trunc_page(l4_utcb_mr()->mr[0]);
+			l4_umword_t ip  = l4_utcb_mr()->mr[1];
+			bool rw         = l4_utcb_mr()->mr[0] & 2;
 
-			/* NULL pointer access */
-			PERR("Possible null pointer %s at %lx IP %lx",
-			     rw ? "WRITE" : "READ", pfa, ip);
-			/* do not unblock faulter */
-			send_reply = false;
-			continue;
-		} else if (!_core_address_ranges().valid_addr(pfa)) {
+			if (pfa < (l4_umword_t)L4_PAGESIZE) {
 
-			/* page-fault address is not in RAM */
-			PERR("%s access outside of RAM at %lx IP %lx",
-			     rw ? "WRITE" : "READ", pfa, ip);
-			/* do not unblock faulter */
-			send_reply = false;
-			continue;
-		} else if (verbose_core_pf)
-			PDBG("pfa=%lx ip=%lx", pfa, ip);
+				/* NULL pointer access */
+				PERR("Possible null pointer %s at %lx IP %lx",
+				     rw ? "WRITE" : "READ", pfa, ip);
+			} else {
 
-		/* my pf handler is sigma0 - just touch the appropriate page */
-		if (rw)
-			touch_rw((void *)pfa, 1);
-		else
-			touch_ro((void *)pfa, 1);
+				/* unexpected page fault within core */
+				PERR("unexpected %s access within core at %lx IP %lx",
+				     rw ? "WRITE" : "READ", pfa, ip);
 
-		send_reply = true;
+				enter_kdebug("unexpected access");
+			}
+		}
+
+		PWRN("core pager: dubious request");
+		panic("core_pager");
+		continue;
 	}
 }
 
 
-Platform::Sigma0::Sigma0(Cap_index* i) : Pager_object(0)
+Core_pager::Core_pager()
+:
+	Pager_object(0)
 {
-	/*
-	 * We use the Pager_object here in a slightly different manner,
-	 * just to tunnel the pager cap to the Platform_thread::start method.
-	 */
-	cap(i);
-}
-
-
-Platform::Core_pager::Core_pager(Platform_pd *core_pd, Sigma0 *sigma0)
-: Platform_thread("core.pager"), Pager_object(0)
-{
-	Platform_thread::pager(sigma0);
-
-	core_pd->bind_thread(this);
-	cap(thread().local);
-
-	/* stack begins at the top end of the '_core_pager_stack' array */
-	void *sp = (void *)&_core_pager_stack[PAGER_STACK_ELEMENTS - 1];
-	start((void *)_core_pager_loop, sp);
+	class Fatal_error { };
 
 	using namespace Fiasco;
+	{
+		l4_msgtag_t const tag = l4_factory_create_thread(L4_BASE_FACTORY_CAP,
+		                                                 CORE_PAGER_THREAD_CAP);
+		if (l4_msgtag_has_error(tag)) {
+			PERR("cannot create core_pager thread");
+			throw Fatal_error();
+		}
+	}
 
+	/* reserve utcb area and associate thread with this task */
+	l4_utcb_t * const utcb = ((l4_utcb_t *)((addr_t)l4_utcb() + L4_UTCB_OFFSET));
 	l4_thread_control_start();
-	l4_thread_control_pager(thread().local.dst());
-	l4_thread_control_exc_handler(thread().local.dst());
-	l4_msgtag_t tag = l4_thread_control_commit(L4_BASE_THREAD_CAP);
-	if (l4_msgtag_has_error(tag))
-		PWRN("l4_thread_control_commit failed!");
+	l4_thread_control_bind(utcb, L4_BASE_TASK_CAP);
+	l4_msgtag_t tag = l4_thread_control_commit(CORE_PAGER_THREAD_CAP);
+	if (l4_msgtag_has_error(tag)) {
+		PWRN("l4_thread_control_commit for core_pager failed");
+		throw Fatal_error();
+	}
+
+	/* set human readable name in kernel debugger */
+	l4_debugger_set_object_name(CORE_PAGER_THREAD_CAP, "core.pager");
+
+	/* set priority */
+	l4_sched_param_t params = l4_sched_param(Platform_thread::DEFAULT_PRIORITY);
+	l4_scheduler_run_thread(L4_BASE_SCHEDULER_CAP, CORE_PAGER_THREAD_CAP, &params);
+
+	/*
+	 * Set core pager as pager to itself. This way, if the core pager
+	 * faults (which should never happen), we deadlock instead of
+	 * silently accessing illegal memory addresses. This condition
+	 * can be easily detected in the kernel debugger using the 'lp'
+	 * command and looking for the core pager sending a message to
+	 * itself.
+	 */
+	l4_thread_control_start();
+	l4_thread_control_pager(CORE_PAGER_THREAD_CAP);
+	l4_thread_control_exc_handler(CORE_PAGER_THREAD_CAP);
+	tag = l4_thread_control_commit(CORE_PAGER_THREAD_CAP);
+	if (l4_msgtag_has_error(tag)) {
+		PWRN("l4_thread_control_commit for pager thread failed!");
+		enter_kdebug("setting pager for core.pager failed");
+	}
+
+	/* set initial instruction pointer and stack pointer */
+	addr_t const sp = (addr_t)&_stack[STACK_NUM_ELEMENTS];
+	addr_t const ip = (addr_t)_entry;
+	tag = l4_thread_ex_regs(CORE_PAGER_THREAD_CAP, ip, sp, 0);
+	if (l4_msgtag_has_error(tag)) {
+		PWRN("l4_thread_ex_regs for core_pager failed");
+		throw Fatal_error();
+	}
 }
 
 
-Platform::Core_pager *Platform::core_pager()
+Core_pager *Core_pager::core_pager()
 {
-	static Core_pager _core_pager(core_pd(), &_sigma0);
+	static Core_pager _core_pager;
 	return &_core_pager;
 }
 
 
-/***********************************
- ** Helper for L4 region handling **
- ***********************************/
+/*******************************************
+ ** Helper for populating core allocators **
+ *******************************************/
 
 struct Region
 {
@@ -194,7 +244,7 @@ static inline void print_region(Region r)
 /**
  * Add region to allocator
  */
-static inline void add_region(Region r, Range_allocator &alloc)
+static inline void add_region(Region r, Range_allocator *alloc)
 {
 	if (verbose_region_alloc) {
 		printf("%p    add: ", &alloc); print_region(r); printf("\n");
@@ -204,14 +254,14 @@ static inline void add_region(Region r, Range_allocator &alloc)
 	addr_t start = trunc_page(r.start);
 	addr_t end   = round_page(r.end);
 
-	alloc.add_range(start, end - start);
+	alloc->add_range(start, end - start);
 }
 
 
 /**
  * Remove region from allocator
  */
-static inline void remove_region(Region r, Range_allocator &alloc)
+static inline void remove_region(Region r, Range_allocator *alloc)
 {
 	if (verbose_region_alloc) {
 		printf("%p remove: ", &alloc); print_region(r); printf("\n");
@@ -221,136 +271,37 @@ static inline void remove_region(Region r, Range_allocator &alloc)
 	addr_t start = trunc_page(r.start);
 	addr_t end   = round_page(r.end);
 
-	alloc.remove_range(start, end - start);
+	alloc->remove_range(start, end - start);
 }
 
 
-/**
- * Request any RAM page from Sigma0
- */
-static inline int sigma0_req_region(addr_t *addr, unsigned log2size)
-{
-	using namespace Fiasco;
-
-	l4_utcb_mr()->mr[0] = SIGMA0_REQ_FPAGE_ANY;
-	l4_utcb_mr()->mr[1] = l4_fpage(0, log2size, 0).raw;
-
-	/* open receive window for mapping */
-	l4_utcb_br()->bdr  &= ~L4_BDR_OFFSET_MASK;
-	l4_utcb_br()->br[0] = L4_ITEM_MAP;
-	l4_utcb_br()->br[1] = l4_fpage(0, L4_WHOLE_ADDRESS_SPACE, L4_FPAGE_RWX).raw;
-
-	l4_msgtag_t tag = l4_msgtag(L4_PROTO_SIGMA0, 2, 0, 0);
-	tag = l4_ipc_call(L4_BASE_PAGER_CAP, l4_utcb(), tag, L4_IPC_NEVER);
-	if (l4_ipc_error(tag, l4_utcb()))
-		return -1;
-
-	if (l4_msgtag_items(tag) != 1)
-		return -2;
-
-	*addr = l4_utcb_mr()->mr[0] & (~0UL << L4_PAGESHIFT);
-
-	touch_rw((void *)addr, 1);
-
-	return 0;
-}
-
-
-static Fiasco::l4_kernel_info_t *sigma0_map_kip()
-{
-	using namespace Fiasco;
-
-	/* signal we want to map the KIP */
-	l4_utcb_mr()->mr[0] = SIGMA0_REQ_KIP;
-
-	/* open receive window for KIP one-to-one */
-	l4_utcb_br()->bdr  &= ~L4_BDR_OFFSET_MASK;
-	l4_utcb_br()->br[0] = L4_ITEM_MAP;
-	l4_utcb_br()->br[1] = l4_fpage(0, L4_WHOLE_ADDRESS_SPACE, L4_FPAGE_RX).raw;
-
-	/* call sigma0 */
-	l4_msgtag_t tag = l4_ipc_call(L4_BASE_PAGER_CAP,
-	                              l4_utcb(),
-	                              l4_msgtag(L4_PROTO_SIGMA0, 1, 0, 0),
-	                              L4_IPC_NEVER);
-	if (l4_ipc_error(tag, l4_utcb()))
-		return 0;
-
-	l4_addr_t ret = l4_trunc_page(l4_utcb_mr()->mr[0]);
-	return (l4_kernel_info_t*) ret;
-}
-
-
-void Platform::_setup_mem_alloc()
-{
-	/*
-	 * Completely map program image by touching all pages read-only to
-	 * prevent sigma0 from handing out those page as anonymous memory.
-	 */
-	volatile const char *beg, *end;
-	beg = (const char *)(((Genode::addr_t)&_prog_img_beg) & L4_PAGEMASK);
-	end = (const char *)&_prog_img_end;
-	for ( ; beg < end; beg += L4_PAGESIZE) (void)(*beg);
-
-	/* request pages of known page size starting with largest */
-	size_t log2_sizes[] = { L4_LOG2_SUPERPAGESIZE, L4_LOG2_PAGESIZE };
-
-	for (unsigned i = 0; i < sizeof(log2_sizes)/sizeof(*log2_sizes); ++i) {
-		size_t log2_size = log2_sizes[i];
-		size_t size      = 1 << log2_size;
-		int    err       = 0;
-		addr_t addr      = 0;
-		Region region;
-
-		/* request any page of current size from sigma0 */
-		do {
-			err = sigma0_req_region(&addr, log2_size);
-			if (!err) {
-				/* XXX do not allocate page0 */
-				if (addr == 0) {
-					Fiasco::l4_task_unmap(Fiasco::L4_BASE_TASK_CAP,
-					                      Fiasco::l4_fpage(0, log2_size,
-					                                       Fiasco::L4_FPAGE_RW),
-					                      Fiasco::L4_FP_ALL_SPACES);
-					continue;
-				}
-
-				region.start = addr; region.end = addr + size;
-				if (!region.intersects(Native_config::context_area_virtual_base(),
-				                       Native_config::context_area_virtual_size())) {
-					add_region(region, _ram_alloc);
-					add_region(region, _core_address_ranges());
-				}
-				remove_region(region, _io_mem_alloc);
-				remove_region(region, _region_alloc);
-			}
-		} while (!err);
-	}
-}
-
+/*************************
+ ** Core initialization **
+ *************************/
 
 void Platform::_setup_irq_alloc() { _irq_alloc.add_range(0, 0x100); }
+
+
+extern long *__initial_sp; /* defined in 'crt0.s' */
 
 
 void Platform::_setup_basics()
 {
 	using namespace Fiasco;
+	using L4::Kip::Mem_desc;
 
-	kip = sigma0_map_kip();
-	if (!kip)
-		panic("kip mapping failed");
+	kip = (Fiasco::l4_kernel_info_t *)(*__initial_sp);
 
 	if (kip->magic != L4_KERNEL_INFO_MAGIC)
-		panic("Sigma0 mapped something but not the KIP");
+		panic("Could not obtain kernel info page");
 
 	if (verbose) {
 		printf("\n");
 		printf("KIP @ %p\n", kip);
 		printf("    magic: %08zx\n", (size_t)kip->magic);
 		printf("  version: %08zx\n", (size_t)kip->version);
-		printf("         sigma0 "); printf(" esp: %08lx  eip: %08lx\n", kip->sigma0_esp, kip->sigma0_eip);
-		printf("         sigma1 "); printf(" esp: %08lx  eip: %08lx\n", kip->sigma1_esp, kip->sigma1_eip);
-		printf("           root "); printf(" esp: %08lx  eip: %08lx\n", kip->root_esp, kip->root_eip);
+		printf("           root "); printf(" esp: %08lx  eip: %08lx\n",
+		       kip->root_esp, kip->root_eip);
 	}
 
 	/* add KIP as ROM module */
@@ -362,68 +313,127 @@ void Platform::_setup_basics()
 	_mb_info = Multiboot_info(mb_info_ptr);
 	if (verbose) printf("MBI @ %p\n", mb_info_ptr);
 
-	/* parse memory descriptors - look for virtual memory configuration */
-	/* XXX we support only one VM region (here and also inside RM) */
-	using Fiasco::L4::Kip::Mem_desc;
-
+	/* parse memory descriptors */
 	_vm_start = 0; _vm_size  = 0;
-	Mem_desc *desc = Mem_desc::first(kip);
+	Mem_desc * const descriptors = Mem_desc::first(kip);
 
-	for (unsigned i = 0; i < Mem_desc::count(kip); ++i)
-		if (desc[i].is_virtual()) {
-			_vm_start = round_page(desc[i].start());
-			_vm_size  = trunc_page(desc[i].end() - _vm_start + 1);
+	for (unsigned i = 0; i < Mem_desc::count(kip); i++) {
 
+		Mem_desc &desc = descriptors[i];
+
+		addr_t const start = desc.start();
+		addr_t const end   = desc.end();
+		size_t const size  = end - start + 1;
+
+		if (desc.is_virtual()) {
+			/* we support only one VM region (here and also inside RM) */
+			_vm_start = start;
+			_vm_size  = size;
+			continue;
+		}
+
+		switch (desc.type()) {
+		case Mem_desc::Bootloader:
+		case Mem_desc::Dedicated:
+		case Mem_desc::Reserved:
+		case Mem_desc::Shared:
+		case Mem_desc::Undefined:
+		case Mem_desc::Arch:
+			break;
+
+		case Mem_desc::Conventional:
+			add_region(Region(start, end), _core_mem_alloc.phys_alloc());
 			break;
 		}
+	}
 	if (_vm_size == 0)
 		panic("Virtual memory configuration not found");
 
 	/* configure applicable address space but never use page0 */
 	_vm_size  = _vm_start == 0 ? _vm_size - L4_PAGESIZE : _vm_size;
 	_vm_start = _vm_start == 0 ? L4_PAGESIZE : _vm_start;
-	_region_alloc.add_range(_vm_start, _vm_size);
+	add_region(Region(_vm_start, _vm_start + _vm_size - 1), _core_mem_alloc.virt_alloc());
 
 	/* preserve context area in core's virtual address space */
-	_region_alloc.remove_range(Native_config::context_area_virtual_base(),
-	                           Native_config::context_area_virtual_size());
+	_core_mem_alloc.virt_alloc()->remove_range(Native_config::context_area_virtual_base(),
+	                                           Native_config::context_area_virtual_size());
 
-	/* preserve utcb- area in core's virtual address space */
-	_region_alloc.remove_range((addr_t)l4_utcb(), L4_PAGESIZE);
+	/* preserve UTCB area from region allocator */
+	_core_mem_alloc.virt_alloc()->remove_range((addr_t)l4_utcb(), L4_PAGESIZE);
 
-	/* I/O memory could be the whole user address space */
-	/* FIXME if the kernel helps to find out max address - use info here */
-	_io_mem_alloc.add_range(0, ~0);
+	/* remove KIP, initial stack, and MBI area from region allocator */
+	_core_mem_alloc.virt_alloc()->remove_range((addr_t)kip, L4_PAGESIZE);
+	_core_mem_alloc.virt_alloc()->remove_range(trunc_page((addr_t)__initial_sp), L4_PAGESIZE);
+	remove_region(Region((addr_t)mb_info_ptr,
+	                     (addr_t)mb_info_ptr + _mb_info.size() - 1),
+	              _core_mem_alloc.virt_alloc());
 
-	/* remove KIP and MBI area from region and IO_MEM allocator */
-	remove_region(Region((addr_t)kip, (addr_t)kip + L4_PAGESIZE), _region_alloc);
-	remove_region(Region((addr_t)kip, (addr_t)kip + L4_PAGESIZE), _io_mem_alloc);
-	remove_region(Region((addr_t)mb_info_ptr, (addr_t)mb_info_ptr + _mb_info.size()), _region_alloc);
-	remove_region(Region((addr_t)mb_info_ptr, (addr_t)mb_info_ptr + _mb_info.size()), _io_mem_alloc);
+	/* leave zero page free to detect dereferenced NULL pointers */
+	_core_mem_alloc.virt_alloc()->remove_range(0, L4_PAGESIZE);
 
-	/* remove core program image memory from region and IO_MEM allocator */
+	/* remove core program image memory from region allocator */
 	addr_t img_start = (addr_t) &_prog_img_beg;
 	addr_t img_end   = (addr_t) &_prog_img_end;
-	remove_region(Region(img_start, img_end), _region_alloc);
-	remove_region(Region(img_start, img_end), _io_mem_alloc);
+	for (addr_t addr = img_start; addr < img_end; addr += L4_PAGESIZE)
+		touch_read_write((unsigned char volatile *)addr);
 
-	/* image is accessible by core */
-	add_region(Region(img_start, img_end), _core_address_ranges());
+	remove_region(Region(img_start, img_end), _core_mem_alloc.virt_alloc());
+
+	/* exclude regions reported by the kernel as reserved */
+	for (unsigned i = 0; i < Mem_desc::count(kip); i++) {
+
+		Mem_desc &desc = descriptors[i];
+
+		if (desc.is_virtual())
+			continue;
+
+		if (desc.type() == Mem_desc::Conventional)
+			continue;
+
+		remove_region(Region(desc.start(), desc.end()), _core_mem_alloc.phys_alloc());
+	}
+
+	/*
+	 * Populate allocator of memory-mapped I/O ranges
+	 *
+	 * Everything not reported by the kernel is considered as potential
+	 * MMIO resource.
+	 */
+	_io_mem_alloc.add_range(0, ~0UL);
+
+	/* exclude conventional RAM from memory-mapped I/O ranges */
+	for (unsigned i = 0; i < Mem_desc::count(kip); i++) {
+		Mem_desc &desc = descriptors[i];
+		if (!desc.is_virtual() && desc.type() == Mem_desc::Conventional)
+			remove_region(Region(desc.start(), desc.end()), &_io_mem_alloc);
+	}
+
+	/* allow BIOS regions to be handed out to user-level device drivers */
+	for (unsigned i = 0; i < Mem_desc::count(kip); i++) {
+		Mem_desc &desc = descriptors[i];
+		if (desc.type() == Mem_desc::Arch)
+			add_region(Region(desc.start(), desc.end()), &_io_mem_alloc);
+	}
+
+	/*
+	 * Allow core to access all I/O ports
+	 */
+	l4_task_map(L4_BASE_TASK_CAP, L4_BASE_TASK_CAP, l4_iofpage(0, 16), 0);
 }
 
 
 void Platform::_setup_rom()
 {
-	Rom_module rom;
-
+	/*
+	 * We do not export any boot module loaded before FIRST_ROM.
+	 */
+	enum { FIRST_ROM = 2 };
 	for (unsigned i = FIRST_ROM; i < _mb_info.num_modules();  i++) {
+		Rom_module rom;
 		if (!(rom = _mb_info.get_module(i)).valid()) continue;
 
 		Rom_module *new_rom = new(core_mem_alloc()) Rom_module(rom);
 		_rom_fs.insert(new_rom);
-
-		/* map module */
-		touch_ro((const void*)new_rom->addr(), new_rom->size());
 
 		if (verbose)
 			printf(" mod[%d] [%p,%p) %s\n", i,
@@ -435,12 +445,10 @@ void Platform::_setup_rom()
 		if (count != L4_PAGESIZE)
 			memset(reinterpret_cast<void *>(rom.addr() + rom.size()), 0, count);
 
-		/* remove ROM area from region and IO_MEM allocator */
-		remove_region(Region(new_rom->addr(), new_rom->addr() + new_rom->size()), _region_alloc);
-		remove_region(Region(new_rom->addr(), new_rom->addr() + new_rom->size()), _io_mem_alloc);
+		unmap_local(rom.addr(), round_page(rom.size()) / L4_PAGESIZE);
 
-		/* add area to core-accessible ranges */
-		add_region(Region(new_rom->addr(), new_rom->addr() + new_rom->size()), _core_address_ranges());
+		/* remove ROM area from IO_MEM allocator */
+		remove_region(Region(new_rom->addr(), new_rom->addr() + new_rom->size()), &_io_mem_alloc);
 	}
 
 	Rom_module *kip_rom = new(core_mem_alloc())
@@ -449,54 +457,100 @@ void Platform::_setup_rom()
 }
 
 
-Platform::Platform() :
-	_ram_alloc(0), _io_mem_alloc(core_mem_alloc()),
-	_io_port_alloc(core_mem_alloc()), _irq_alloc(core_mem_alloc()),
-	_region_alloc(core_mem_alloc()), _cap_id_alloc(core_mem_alloc()),
-	_sigma0(cap_map()->insert(_cap_id_alloc.alloc(), Fiasco::L4_BASE_PAGER_CAP))
+Pager_object *Platform::core_pager() { return Core_pager::core_pager(); }
+
+
+addr_t Platform::core_utcb_area_start()
 {
+	using namespace Fiasco;
+
 	/*
-	 * We must be single-threaded at this stage and so this is safe.
+	 * Initialize static 'base' the first time the function is called from
+	 * the core.main thread. Any subsequent calls will return the same value.
+	 *
+	 * We leave the first two utcb slots for the core main thread and the
+	 * core pager thread.
 	 */
-	static bool initialized = 0;
-	if (initialized) panic("Platform constructed twice!");
-	initialized = true;
+	static addr_t const base = (addr_t)l4_utcb() + 2*L4_UTCB_OFFSET;
+	return base;
+}
+
+
+static void init_main_thread()
+{
+	using namespace Fiasco;
+
+	unsigned const irq_cap_sel = MAIN_THREAD_CAP + THREAD_IRQ_CAP;
+	/* create irq for main thread */
+	l4_msgtag_t tag = l4_factory_create_irq(L4_BASE_FACTORY_CAP, irq_cap_sel);
+	if (l4_msgtag_has_error(tag))
+		PWRN("creating thread's irq failed");
+
+	/* attach thread to irq */
+	tag = l4_irq_attach(irq_cap_sel, 0, MAIN_THREAD_CAP);
+	if (l4_msgtag_has_error(tag))
+		PWRN("attaching thread's irq failed");
+
+	l4_debugger_set_object_name(L4_BASE_THREAD_CAP, "core.main");
+
+	/* set priority */
+	l4_sched_param_t params = l4_sched_param(Platform_thread::DEFAULT_PRIORITY);
+	l4_scheduler_run_thread(L4_BASE_SCHEDULER_CAP, L4_BASE_THREAD_CAP, &params);
+
+	/* assign core pager to main thread */
+	l4_thread_control_start();
+	l4_thread_control_pager(CORE_PAGER_THREAD_CAP);
+	l4_thread_control_exc_handler(CORE_PAGER_THREAD_CAP);
+	tag = l4_thread_control_commit(L4_BASE_THREAD_CAP);
+	if (l4_msgtag_has_error(tag)) {
+		PWRN("l4_thread_control_commit for main thread failed!");
+		enter_kdebug("setting pager for core.main failed");
+	}
+}
+
+
+Platform::Platform()
+:
+	_io_mem_alloc(core_mem_alloc()),
+	_io_port_alloc(core_mem_alloc()), _irq_alloc(core_mem_alloc()),
+	_cap_id_alloc(core_mem_alloc())
+{
+	/* remember start of core's UTCB area */
+	core_utcb_area_start();
 
 	_setup_basics();
-	_setup_mem_alloc();
 	_setup_io_port_alloc();
 	_setup_irq_alloc();
 	_setup_rom();
 
+	/*
+	 * Create Genode capability designated for pointing to the core pager.
+	 *
+	 * This capability will be assigned to core threads created via the
+	 * 'Thread_base' API (see 'core/thread_start.cc').
+	 */
+	Core_cap_index *core_pager_cap_index =
+		reinterpret_cast<Core_cap_index*>(cap_map()->insert(cap_id_alloc()->alloc(),
+		                                                    Fiasco::CORE_PAGER_THREAD_CAP));
+	Native_capability core_pager_cap(core_pager_cap_index);
+	core_pager()->cap(core_pager_cap);
+
 	if (verbose) {
-		printf(":ram_alloc: ");    _ram_alloc.raw()->dump_addr_tree();
-		printf(":region_alloc: "); _region_alloc.raw()->dump_addr_tree();
+		printf(":ram_alloc: ");    _core_mem_alloc.phys_alloc()->raw()->dump_addr_tree();
+		printf(":region_alloc: "); _core_mem_alloc.virt_alloc()->raw()->dump_addr_tree();
 		printf(":io_mem: ");       _io_mem_alloc.raw()->dump_addr_tree();
 		printf(":io_port: ");      _io_port_alloc.raw()->dump_addr_tree();
 		printf(":irq: ");          _irq_alloc.raw()->dump_addr_tree();
 		printf(":rom_fs: ");       _rom_fs.print_fs();
-		printf(":core ranges: ");  _core_address_ranges().raw()->dump_addr_tree();
 	}
 
-	Core_cap_index* pdi =
-		reinterpret_cast<Core_cap_index*>(cap_map()->insert(_cap_id_alloc.alloc(), Fiasco::L4_BASE_TASK_CAP));
-	Core_cap_index* thi =
-		reinterpret_cast<Core_cap_index*>(cap_map()->insert(_cap_id_alloc.alloc(), Fiasco::L4_BASE_THREAD_CAP));
-	Core_cap_index* irqi =
-		reinterpret_cast<Core_cap_index*>(cap_map()->insert(_cap_id_alloc.alloc()));
+	init_main_thread();
+
+	Core_cap_index* pd_cap_index =
+		reinterpret_cast<Core_cap_index*>(cap_map()->insert(cap_id_alloc()->alloc(), Fiasco::L4_BASE_TASK_CAP));
 
 	/* setup pd object for core pd */
-	_core_pd = new(core_mem_alloc()) Platform_pd(pdi);
-
-	/*
-	 * We setup the thread object for thread0 in core pd using a special
-	 * interface that allows us to specify the capability slot.
-	 */
-	Platform_thread *core_thread = new(core_mem_alloc())
-		Platform_thread(thi, irqi, "core.main");
-
-	core_thread->pager(&_sigma0);
-	_core_pd->bind_thread(core_thread);
+	_core_pd = new(core_mem_alloc()) Platform_pd(pd_cap_index);
 }
 
 
@@ -514,3 +568,4 @@ void Platform::wait_for_exit()
 
 
 void Core_parent::exit(int exit_value) { }
+

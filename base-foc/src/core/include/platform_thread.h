@@ -41,10 +41,10 @@ namespace Genode {
 			Cap_mapping   _pager;
 			Cap_mapping   _irq;
 			Native_utcb   _utcb;
-			char          _name[32];       /* thread name that will be
+			char          _name[32];      /* thread name that will be
 			                                 registered at the kernel
 			                                 debugger */
-			Platform_pd  *_platform_pd;    /* protection domain thread
+			Platform_pd  *_platform_pd;   /* protection domain thread
 			                                 is bound to */
 			Pager_object *_pager_obj;
 			unsigned      _prio;
@@ -58,20 +58,9 @@ namespace Genode {
 			enum { DEFAULT_PRIORITY = 128 };
 
 			/**
-			 * Constructor for non-core threads
+			 * Constructor
 			 */
-			Platform_thread(const char *name, unsigned priority);
-
-			/**
-			 * Constructor for core main-thread
-			 */
-			Platform_thread(Core_cap_index* thread,
-			                Core_cap_index* irq, const char *name);
-
-			/**
-			 * Constructor for core threads
-			 */
-			Platform_thread(const char *name);
+			Platform_thread(const char *name, unsigned priority, bool is_core = false);
 
 			/**
 			 * Destructor

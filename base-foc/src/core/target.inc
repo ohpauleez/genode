@@ -11,6 +11,7 @@ SRC_CC       = cap_session_component.cc \
                context_area.cc \
                cpu_session_component.cc \
                cpu_session_extension.cc \
+               core_rm_session.cc \
                dataspace_component.cc \
                dump_alloc.cc \
                io_mem_session_component.cc \
@@ -33,6 +34,7 @@ SRC_CC       = cap_session_component.cc \
                signal_source_component.cc \
                thread_start.cc \
                thread_context_area.cc \
+               core_mem_alloc.cc \
                core_printf.cc
 
 INC_DIR     += $(REP_DIR)/src/core/include \
@@ -54,6 +56,7 @@ vpath ram_session_component.cc    $(GEN_CORE_DIR)
 vpath rm_session_component.cc     $(GEN_CORE_DIR)
 vpath rom_session_component.cc    $(GEN_CORE_DIR)
 vpath signal_session_component.cc $(GEN_CORE_DIR)
+vpath core_mem_alloc.cc           $(GEN_CORE_DIR)
 vpath core_printf.cc              $(BASE_DIR)/src/base/console
 vpath %.cc                        $(REP_DIR)/src/core
 vpath %.cc                        $(REP_DIR)/src/base/thread

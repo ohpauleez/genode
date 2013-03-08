@@ -1,6 +1,7 @@
 /*
  * \brief  Fiasco-specific part of RM-session implementation
  * \author Stefan Kalkowski
+ * \author Norman Feske
  * \date   2011-01-18
  */
 
@@ -19,6 +20,8 @@ using namespace Genode;
 
 void Rm_client::unmap(addr_t core_local_base, addr_t virt_base, size_t size)
 {
-	// TODO unmap it only from target space
-	unmap_local(core_local_base, size >> get_page_size_log2());
+	Locked_ptr<Address_space> locked_address_space(_address_space);
+
+	if (locked_address_space.is_valid())
+		locked_address_space->flush(virt_base, size);
 }

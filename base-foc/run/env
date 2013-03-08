@@ -145,7 +145,6 @@ proc build_boot_image_x86 {binaries} {
 	if {![fiasco_external] && ![file exists kernel]} { lappend foc_targets kernel }
 	if {![l4_dir_external]} {
 		if {![file exists bootstrap]} { lappend foc_targets bootstrap }
-		if {![file exists sigma0]}    { lappend foc_targets sigma0    }
 	}
 	if {[llength $foc_targets] > 0} { build $foc_targets }
 
@@ -154,8 +153,6 @@ proc build_boot_image_x86 {binaries} {
 
 	puts "using fiasco kernel [fiasco]"
 	exec cp [fiasco] [run_dir]/fiasco
-	puts "using sigma0/bootstrap at [l4_dir]"
-	exec cp [bin_dir]/l4f/sigma0 [run_dir]/fiasco
 	exec cp [bin_dir]/bootstrap [run_dir]/fiasco
 
 	install_iso_bootloader_to_run_dir
@@ -172,7 +169,6 @@ proc build_boot_image_x86 {binaries} {
 	puts $fh "\ntitle Genode on Fiasco.OC"
 	puts $fh " kernel /fiasco/bootstrap -modaddr=0x01100000"
 	puts $fh " module /fiasco/fiasco -serial_esc"
-	puts $fh " module /fiasco/sigma0"
 	puts $fh " module /genode/core"
 	puts $fh " module /genode/config"
 	foreach binary $binaries {
@@ -205,7 +201,6 @@ proc build_boot_image_arm {binaries} {
 		if {$binary != "core"} {
 			puts $fh "module   genode/$binary" } }
 	close $fh
-
 
 	set gen_img_cmd "make -C [l4_dir]/source O=[l4_dir] E=genode "
 	append gen_img_cmd "MODULES_LIST=[pwd]/[run_dir]/modules.list "

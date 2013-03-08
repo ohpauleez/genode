@@ -32,36 +32,36 @@ namespace Genode {
 	/**
 	 * Map pages locally within core
 	 *
-	 * On Fiasco, all mapping originate from virtual addresses. At startup,
-	 * core obtains the whole memory sigma0 in a one-to-one fashion. Hence,
-	 * core-local addresses normally correspond to physical addresses.
+	 * All mapping originate from the physical address space.
 	 *
-	 * \param from_addr  core-virtual source address
+	 * \param from_addr  physical source address
 	 * \param to_addr    core-virtual destination address
 	 * \param num_pages  number of pages to remap
 	 */
+	inline bool map_local(addr_t from_addr, addr_t to_addr, size_t num_pages,
+	                      bool writable, bool cached)
+	{
+		using namespace Fiasco;
+
+		long const perm = writable ? L4_FPAGE_RWX : L4_FPAGE_RX;
+		long const type = cached ? 0 : (L4_FPAGE_BUFFERABLE << L4_FPAGE_RIGHTS_BITS);
+
+		addr_t offset = 0;
+		for (unsigned i = 0; i < num_pages; i++, offset += get_page_size()) {
+
+			/* map from physical to core-local address space */
+			l4_task_map(L4_BASE_TASK_CAP, L4_BASE_TASK_CAP,
+			            l4_fpage((addr_t)from_addr + offset,
+			                     get_page_size_log2(), perm),
+			            (to_addr + offset) | type);
+		}
+		return true;
+	}
+
+
 	inline bool map_local(addr_t from_addr, addr_t to_addr, size_t num_pages)
 	{
-		addr_t offset         = 0;
-		size_t page_size      = get_page_size();
-		size_t page_size_log2 = get_page_size_log2();
-		for (unsigned i = 0; i < num_pages; i++, offset += page_size) {
-
-			using namespace Fiasco;
-
-			l4_fpage_t snd_fpage = l4_fpage(from_addr + offset,
-			                                page_size_log2, L4_FPAGE_RW);
-
-			if (l4_msgtag_has_error(l4_task_map(L4_BASE_TASK_CAP,
-			                                    L4_BASE_TASK_CAP,
-			                                    snd_fpage,
-			                                    to_addr + offset))) {
-				PWRN("could not locally remap 0x%lx to 0x%lx", from_addr, to_addr);
-				return false;
-			}
-		}
-
-		return true;
+		return map_local(from_addr, to_addr, num_pages, true, true);
 	}
 
 
@@ -69,57 +69,6 @@ namespace Genode {
 	{
 		return (base & (get_super_page_size() - 1)) == 0
 		    && (size >= get_super_page_size());
-	}
-
-
-	/**
-	 * Map memory-mapped I/O range within core
-	 *
-	 * \return true on success
-	 */
-	static inline bool map_local_io(addr_t from_addr, addr_t to_addr,
-	                                size_t num_pages)
-	{
-		using namespace Fiasco;
-
-		size_t size = num_pages << get_page_size_log2();
-
-		/* call sigma0 for I/O region */
-		unsigned offset = 0;
-		while (size) {
-			/* FIXME what about caching demands? */
-			/* FIXME what about read / write? */
-
-			l4_utcb_mr()->mr[0] = SIGMA0_REQ_FPAGE_IOMEM;
-
-			size_t page_size_log2 = get_page_size_log2();
-			if (can_use_super_page(from_addr + offset, size))
-				page_size_log2 = get_super_page_size_log2();
-			l4_utcb_mr()->mr[1] = l4_fpage(from_addr + offset,
-			                               page_size_log2, L4_FPAGE_RWX).raw;
-
-			/* open receive window for mapping */
-			l4_utcb_br()->bdr   = 0;
-			l4_utcb_br()->br[0] = L4_ITEM_MAP;
-			l4_utcb_br()->br[1] = l4_fpage((addr_t)to_addr + offset,
-			                               page_size_log2, L4_FPAGE_RWX).raw;
-
-			l4_msgtag_t tag = l4_msgtag(L4_PROTO_SIGMA0, 2, 0, 0);
-			tag = l4_ipc_call(L4_BASE_PAGER_CAP, l4_utcb(), tag, L4_IPC_NEVER);
-			if (l4_ipc_error(tag, l4_utcb())) {
-				PERR("Ipc error %ld", l4_ipc_error(tag, l4_utcb()));
-				return false;
-			}
-
-			if (l4_msgtag_items(tag) < 1) {
-				PERR("Got no mapping!");
-				return false;
-			}
-
-			offset += 1 << page_size_log2;
-			size   -= 1 << page_size_log2;
-		}
-		return true;
 	}
 
 
@@ -136,8 +85,8 @@ namespace Genode {
 		for (; addr < local_base + size; addr += L4_PAGESIZE)
 			l4_task_unmap(L4_BASE_TASK_CAP,
 			              l4_fpage(addr, L4_LOG2_PAGESIZE, L4_FPAGE_RW),
-			              L4_FP_OTHER_SPACES);
-			l4_cache_dma_coherent(local_base, local_base + size);
+			              L4_FP_ALL_SPACES);
+		l4_cache_dma_coherent(local_base, local_base + size);
 	}
 }
 

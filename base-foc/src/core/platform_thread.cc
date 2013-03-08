@@ -78,9 +78,9 @@ void Platform_thread::pause()
 		return;
 	}
 
-	unsigned exc      = _pager_obj->state.exceptions;
-	_pager_obj->state.ip  = ~0UL;
-	_pager_obj->state.sp  = ~0UL;
+	unsigned exc = _pager_obj->state.exceptions;
+	_pager_obj->state.ip = ~0UL;
+	_pager_obj->state.sp = ~0UL;
 	l4_umword_t flags = L4_THREAD_EX_REGS_TRIGGER_EXCEPTION;
 
 	/* Mark thread to be stopped */
@@ -143,16 +143,17 @@ void Platform_thread::bind(Platform_pd *pd)
 
 void Platform_thread::unbind()
 {
+	unsigned long const cap_sel = _thread.local.dst();
+
 	/* first set the thread as its own pager */
 	l4_thread_control_start();
-	l4_thread_control_pager(_gate.remote);
-	l4_thread_control_exc_handler(_gate.remote);
-	if (l4_msgtag_has_error(l4_thread_control_commit(_thread.local.dst())))
-		PWRN("l4_thread_control_commit for %lx failed!",
-		     (unsigned long) _thread.local.dst());
+	l4_thread_control_pager(cap_sel);
+	l4_thread_control_exc_handler(cap_sel);
+	if (l4_msgtag_has_error(l4_thread_control_commit(cap_sel)))
+		PWRN("l4_thread_control_commit for %lx failed!", cap_sel);
 
 	/* now force it into a pagefault */
-	l4_thread_ex_regs(_thread.local.dst(), 0, 0, L4_THREAD_EX_REGS_CANCEL);
+	l4_thread_ex_regs(cap_sel, 0, 0, L4_THREAD_EX_REGS_CANCEL);
 
 	_platform_pd = (Platform_pd*) 0;
 }
@@ -247,45 +248,15 @@ Weak_ptr<Address_space> Platform_thread::address_space()
 }
 
 
-Platform_thread::Platform_thread(const char *name,
-                                 unsigned    prio)
-: _core_thread(false),
-  _thread(true),
-  _irq(true),
-  _utcb(0),
-  _platform_pd(0),
-  _pager_obj(0),
-  _prio(Cpu_session::scale_priority(DEFAULT_PRIORITY, prio))
-{
-	((Core_cap_index*)_thread.local.idx())->pt(this);
-	_create_thread();
-	_finalize_construction(name);
-}
-
-
-Platform_thread::Platform_thread(Core_cap_index* thread,
-                                 Core_cap_index* irq, const char *name)
-: _core_thread(true),
-  _thread(Native_capability(thread), L4_BASE_THREAD_CAP),
-  _irq(Native_capability(irq)),
-  _utcb(0),
-  _platform_pd(0),
-  _pager_obj(0),
-  _prio(Cpu_session::scale_priority(DEFAULT_PRIORITY, 0))
-{
-	reinterpret_cast<Core_cap_index*>(_thread.local.idx())->pt(this);
-	_finalize_construction(name);
-}
-
-
-Platform_thread::Platform_thread(const char *name)
-: _core_thread(true),
-  _thread(true),
-  _irq(true),
-  _utcb(0),
-  _platform_pd(0),
-  _pager_obj(0),
-  _prio(Cpu_session::scale_priority(DEFAULT_PRIORITY, 0))
+Platform_thread::Platform_thread(const char *name, unsigned prio, bool is_core)
+:
+	_core_thread(is_core),
+	_thread(true),
+	_irq(true),
+	_utcb(0),
+	_platform_pd(0),
+	_pager_obj(0),
+	_prio(Cpu_session::scale_priority(DEFAULT_PRIORITY, prio))
 {
 	((Core_cap_index*)_thread.local.idx())->pt(this);
 	_create_thread();
@@ -298,8 +269,8 @@ Platform_thread::~Platform_thread()
 	_gate.local.idx()->dec();
 
 	/*
-	 * We inform our protection domain about thread destruction, which will end up in
-	 * Thread::unbind()
+	 * We inform our protection domain about thread destruction, which will end
+	 * up in Thread::unbind()
 	 */
 	if (_platform_pd)
 		_platform_pd->unbind_thread(this);

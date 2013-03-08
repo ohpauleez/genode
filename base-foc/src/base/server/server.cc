@@ -19,6 +19,10 @@
 /* Genode includes */
 #include <base/rpc_server.h>
 
+namespace Fiasco {
+#include <l4/sys/kdebug.h>
+}
+
 using namespace Genode;
 
 
@@ -67,6 +71,8 @@ void Rpc_entrypoint::entry()
 		/* check whether capability's label fits global id */
 		if (((unsigned long)srv.badge()) != _rcv_buf.label()) {
 			PWRN("somebody tries to fake us!");
+			using namespace Fiasco;
+			enter_kdebug("somebody tries to fake us!");
 			continue;
 		}
 
