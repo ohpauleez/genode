@@ -80,16 +80,7 @@ namespace Genode {
 			 * On Fiasco, we need to map a page locally to be able to map it to
 			 * another address space.
 			 */
-			void prepare_map_operation()
-			{
-				size_t mapping_size = 1 << _log2size;
-				for (addr_t i = 0; i < mapping_size; i += L4_PAGESIZE) {
-					if (_rw)
-						touch_read_write((unsigned char volatile *)(_src_addr + i));
-					else
-						touch_read((unsigned char const volatile *)(_src_addr + i));
-				}
-			}
+			void prepare_map_operation() { }
 	};
 
 
