@@ -59,10 +59,10 @@ namespace Genode {
 					 *
 					 * \param virt_addr  core-local address
 					 * \param phys_addr  physical memory address
-					 * \param size_log2  size of memory block to map
+					 * \param size       size (in bytes) if memory block to map
 					 * \return           true on success
 					 */
-					bool _map_local(addr_t virt_addr, addr_t phys_addr, unsigned size_log2);
+					bool _map_local(addr_t virt_addr, addr_t phys_addr, unsigned size);
 
 				public:
 

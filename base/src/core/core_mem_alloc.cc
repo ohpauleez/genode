@@ -52,8 +52,11 @@ bool Core_mem_allocator::Mapped_mem_allocator::alloc(size_t size, void **out_add
 		printf("added core memory block of %zd bytes at virt=%p phys=%p\n",
 		       page_rounded_size, virt_addr, phys_addr);
 
-	/* make physical page accessible at the designated virtual address */
-	_map_local((addr_t)virt_addr, (addr_t)phys_addr, get_page_size_log2());
+	/* make physical pages accessible at the designated virtual address */
+	_map_local((addr_t)virt_addr, (addr_t)phys_addr, page_rounded_size);
+
+	/* zero-out content */
+	memset(virt_addr, 0, page_rounded_size);
 
 	/* add new range to core's allocator for mapped virtual memory */
 	_alloc.add_range((addr_t)virt_addr, page_rounded_size);
