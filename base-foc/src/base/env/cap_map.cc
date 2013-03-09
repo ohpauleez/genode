@@ -168,8 +168,8 @@ Genode::Cap_index* Genode::Capability_map::insert_map(int id, addr_t kcap)
 
 	/* map the given cap to our registry entry */
 	l4_task_map(L4_BASE_TASK_CAP, L4_BASE_TASK_CAP,
-				l4_obj_fpage(kcap, 0, L4_FPAGE_RWX),
-				i->kcap() | L4_ITEM_MAP | L4_MAP_ITEM_GRANT);
+	            l4_obj_fpage(kcap, 0, L4_FPAGE_RWX),
+	            i->kcap() | L4_ITEM_MAP | L4_MAP_ITEM_GRANT);
 	return i;
 }
 

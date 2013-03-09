@@ -32,8 +32,8 @@ int main(int argc, char **argv)
 	for (int local_name = 0; local_name < COUNT; local_name++, idx++) {
 		idx->id(local_name);
 		l4_task_map(L4_BASE_TASK_CAP, L4_BASE_TASK_CAP,
-                    l4_obj_fpage(tid, 0, L4_FPAGE_RWX),
-                    idx->kcap() | L4_ITEM_MAP);
+		            l4_obj_fpage(tid, 0, L4_FPAGE_RWX),
+		            idx->kcap() | L4_ITEM_MAP);
 
 		Log_session_capability log_session_cap =
 			reinterpret_cap_cast<Log_session>(Native_capability(idx));
