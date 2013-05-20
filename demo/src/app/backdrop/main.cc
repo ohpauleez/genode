@@ -218,8 +218,21 @@ int main(int argc, char **argv)
 	enum { PNG_NAME_MAX = 128 };
 	static char png_name[PNG_NAME_MAX];
 
+	static Nitpicker::Connection nitpicker;
+
+	/* obtain physical screen size */
+	Framebuffer::Mode const mode = nitpicker.mode();
+
 	if (read_image_filename_from_config(png_name, sizeof(png_name)) < 0)
 		return -1;
+
+	if (mode.width() == 1600) {
+		Genode::strncpy(png_name, "sticks_blue_1600x900.png", 100);
+	}
+
+	if (mode.width() == 1280) {
+		Genode::strncpy(png_name, "sticks_blue_1280x800.png", 100);
+	}
 
 	printf("using PNG file \"%s\" as background\n", png_name);
 
@@ -231,11 +244,6 @@ int main(int argc, char **argv)
 		printf("Error: Could not obtain PNG image from ROM service\n");
 		return -2;
 	}
-
-	static Nitpicker::Connection nitpicker;
-
-	/* obtain physical screen size */
-	Framebuffer::Mode const mode = nitpicker.mode();
 
 	/* setup virtual framebuffer mode */
 	nitpicker.buffer(mode, false);
