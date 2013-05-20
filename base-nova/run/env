@@ -69,16 +69,38 @@ proc build_boot_image {binaries} {
 	# Generate grub config file
 	#
 	set fh [open "[run_dir]/boot/grub/menu.lst" "WRONLY CREAT TRUNC"]
-	puts $fh "timeout 0"
+	puts $fh "timeout 5"
 	puts $fh "default 0"
-	puts $fh "\ntitle Genode on NOVA"
+	puts $fh "\ntitle Genode on NOVA (1600x900)"
 	puts $fh " kernel /boot/bender"
-	puts $fh " module /hypervisor iommu serial nopcid"
+	puts $fh " module /hypervisor serial nopcid"
 	puts $fh " module /genode/core"
 	puts $fh " module /genode/config"
 	foreach binary $binaries {
 		if {$binary != "core"} {
 			puts $fh " module /genode/$binary" } }
+	puts $fh " vbeset 0x17e"
+
+	puts $fh "\ntitle Genode on NOVA (1280x800)"
+	puts $fh " kernel /boot/bender"
+	puts $fh " module /hypervisor serial nopcid"
+	puts $fh " module /genode/core"
+	puts $fh " module /genode/config"
+	foreach binary $binaries {
+		if {$binary != "core"} {
+			puts $fh " module /genode/$binary" } }
+	puts $fh " vbeset 0x167"
+
+	puts $fh "\ntitle Genode on NOVA (1024x768)"
+	puts $fh " kernel /boot/bender"
+	puts $fh " module /hypervisor serial nopcid"
+	puts $fh " module /genode/core"
+	puts $fh " module /genode/config"
+	foreach binary $binaries {
+		if {$binary != "core"} {
+			puts $fh " module /genode/$binary" } }
+	puts $fh " vbeset 0x117"
+	puts $fh ""
 	close $fh
 
 	install_pxe_bootloader_to_run_dir
