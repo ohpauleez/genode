@@ -19,6 +19,8 @@
 #include <pd_session/pd_session.h>
 #include <util/arg_string.h>
 
+#include <base/tslab.h>
+
 /* core includes */
 #include <platform_pd.h>
 
@@ -50,11 +52,22 @@ namespace Genode {
 			Parent_capability  _parent;
 			Rpc_entrypoint    *_thread_ep;
 
+			struct Cap_object : Native_capability, List<Cap_object>::Element
+			{
+				Cap_object(addr_t cap_sel) : Native_capability(cap_sel) {}
+			};
+
+			Tslab<Cap_object, 128> _cap_slab;
+			List<Cap_object>       _cap_list;
+			Lock                   _cap_lock;
+
 		public:
 
-			Pd_session_component(Rpc_entrypoint *thread_ep, char const *args)
-			: _label(args), _pd(_label.string), _thread_ep(thread_ep) { }
+			Pd_session_component(Allocator *md_alloc,
+			                     Rpc_entrypoint *thread_ep, const char *args)
+			: _label(args), _pd(_label.string),  _thread_ep(thread_ep), _cap_slab(md_alloc) { }
 
+			~Pd_session_component();
 
 			/**************************/
 			/** PD session interface **/

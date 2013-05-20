@@ -24,6 +24,26 @@
 using namespace Genode;
 
 
+Pd_session_component::~Pd_session_component()
+{
+	Lock::Guard cap_lock(_cap_lock);
+
+	for (Cap_object *obj; (obj = _cap_list.first()); ) {
+		Object_pool<Cpu_thread_component>::Guard
+			cpu_thread(_thread_ep->lookup_and_lock(obj->local_name()));
+
+		if (cpu_thread) {
+
+			Platform_thread *p_thread = cpu_thread->platform_thread();
+
+			_pd.unbind_thread(p_thread);
+		}
+
+		_cap_list.remove(obj);
+		destroy(&_cap_slab, obj);
+	}
+}
+
 int Pd_session_component::bind_thread(Thread_capability thread)
 {
 	Object_pool<Cpu_thread_component>::Guard cpu_thread(_thread_ep->lookup_and_lock(thread));
@@ -38,6 +58,15 @@ int Pd_session_component::bind_thread(Thread_capability thread)
 
 	_pd.bind_thread(p_thread);
 	cpu_thread->bound(true);
+
+	Lock::Guard cap_lock(_cap_lock);
+
+	/* create cap object */
+	Cap_object * pt_cap = new (&_cap_slab) Cap_object(thread.local_name());
+	if (!pt_cap)
+		return -3;
+
+	_cap_list.insert(pt_cap);
 
 	return 0;
 }

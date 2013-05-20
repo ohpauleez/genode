@@ -34,7 +34,7 @@ int Platform_pd::bind_thread(Platform_thread *thread)
 
 void Platform_pd::unbind_thread(Platform_thread *thread)
 {
-	PDBG("not implemented");
+	thread->bind_to_pd(0, 0);
 }
 
 

@@ -210,7 +210,7 @@ void Platform_thread::resume()
 
 	if (!_pager) return;
 
-	/* Thread was paused beforehand and blocked in pager - wake up pager */
+	/* thread was paused beforehand and blocked in pager - wake up pager */
 	_pager->wake_up();
 }
 
