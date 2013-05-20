@@ -32,7 +32,7 @@ using namespace Vesa;
  */
 static Dataspace_capability io_mem_cap;
 
-static const bool verbose = false;
+static const bool verbose = true;
 
 /***************
  ** Utilities **
@@ -124,7 +124,7 @@ int Framebuffer_drv::map_io_mem(addr_t base, size_t size, bool write_combined,
 }
 
 
-int Framebuffer_drv::use_current_mode()
+int Framebuffer_drv::use_current_mode(unsigned long &width, unsigned long &height)
 {
 	mb_vbe_ctrl_t *ctrl_info;
 	mb_vbe_mode_t *mode_info;
@@ -163,6 +163,18 @@ int Framebuffer_drv::use_current_mode()
 		void *fb;
 		map_io_mem(mode_info->phys_base, ctrl_info->total_memory << 16, true,
 		           &fb, 0, &io_mem_cap);
+	}
+
+	if (vesa_mode == 0x17e) {
+		PDBG("detected 1600x900");
+		width = 1600;
+		height = 900;
+	}
+
+	if (vesa_mode == 0x167) {
+		PDBG("detected 1280x800");
+		width = 1280;
+		height = 800;
 	}
 
 	return 0;

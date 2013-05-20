@@ -205,7 +205,7 @@ namespace Framebuffer {
 				bool          use_current_mode = config_attribute("preinit");
 
 				if (use_current_mode) {
-					if (Framebuffer_drv::use_current_mode()) {
+					if (Framebuffer_drv::use_current_mode(scr_width, scr_height)) {
 						PWRN("Could not use preinitialized VESA mode");
 						throw Root::Invalid_args();
 					}

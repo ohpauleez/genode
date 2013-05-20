@@ -40,7 +40,7 @@ namespace Framebuffer_drv {
 	 */
 	int set_mode(unsigned long width, unsigned long height, unsigned long mode);
 
-	int use_current_mode();
+	int use_current_mode(unsigned long &width, unsigned long &height);
 
 	/**
 	 * Map given device memory, return out_addr (map address)
