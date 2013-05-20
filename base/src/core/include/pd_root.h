@@ -27,11 +27,13 @@ namespace Genode {
 		private:
 
 			Rpc_entrypoint *_thread_ep;
+			Allocator *_md_alloc;
+
 
 		protected:
 
 			Pd_session_component *_create_session(const char *args) {
-				return new (md_alloc()) Pd_session_component(_thread_ep, args); }
+				return new (md_alloc()) Pd_session_component(_md_alloc, _thread_ep, args); }
 
 		public:
 
@@ -47,7 +49,7 @@ namespace Genode {
 			        Allocator      *md_alloc)
 			:
 				Root_component<Pd_session_component>(session_ep, md_alloc),
-				_thread_ep(thread_ep) { }
+				_thread_ep(thread_ep), _md_alloc(md_alloc) { }
 	};
 }
 
