@@ -1,13 +1,5 @@
-/*
-#include <base/stdint.h>
-#include <base/ipc_msgbuf.h>
-#include <base/rpc.h>
-#include <base/signal.h>
-*/
-
 #include <util/string.h>
 #include <trace/policy.h>
-
 
 using namespace Genode;
 
@@ -34,7 +26,7 @@ size_t rpc_returned(char *dst, char const *rpc_name, Msgbuf_base const &)
 	return len;
 }
 
-size_t rpc_dispatch(char *dst, char const *rpc_name, Msgbuf_base const &)
+size_t rpc_dispatch(char *dst, char const *rpc_name)
 {
 	size_t len = strlen(rpc_name);
 
@@ -42,7 +34,7 @@ size_t rpc_dispatch(char *dst, char const *rpc_name, Msgbuf_base const &)
 	return len;
 }
 
-size_t rpc_reply(char *dst, char const *rpc_name, Msgbuf_base const &)
+size_t rpc_reply(char *dst, char const *rpc_name)
 {
 	size_t len = strlen(rpc_name);
 
@@ -50,12 +42,12 @@ size_t rpc_reply(char *dst, char const *rpc_name, Msgbuf_base const &)
 	return len;
 }
 
-size_t signal_submit(char *dst, void const *this_ptr)
+size_t signal_submit(char *dst, unsigned const)
 {
 	return 0;
 }
 
-size_t signal_receive(char *dst, Signal_context const *context)
+size_t signal_receive(char *dst, Signal const &)
 {
 	return 0;
 }
