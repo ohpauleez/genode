@@ -640,7 +640,7 @@ class Menu
 				 * Set to true to enable the toggling of the menu visibility
 				 * when clicking on the top part of the menu.
 				 */
-				bool const visibility_toggle_feature = false;
+				bool const visibility_toggle_feature = true;
 				if (visibility_toggle_feature
 				 && !_focused_entry
 				 && ev->type() == Input::Event::PRESS
