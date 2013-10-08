@@ -91,6 +91,17 @@ proc build_boot_image {binaries} {
 			puts $fh " module /genode/$binary" } }
 	puts $fh " vbeset 0x117"
 	puts $fh ""
+
+	puts $fh "\ntitle Genode on NOVA (1024x768) IOMMU"
+	puts $fh " kernel /boot/bender"
+	puts $fh " module /hypervisor iommu serial"
+	puts $fh " module /genode/core"
+	puts $fh " module /genode/config"
+	foreach binary $binaries {
+		if {$binary != "core"} {
+			puts $fh " module /genode/$binary" } }
+	puts $fh " vbeset 0x117"
+	puts $fh ""
 	close $fh
 
 	install_pxe_bootloader_to_run_dir
