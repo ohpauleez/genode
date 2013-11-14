@@ -137,12 +137,18 @@ namespace {
 			 */
 			static char const *_dev_name() { return "/dev/terminal"; }
 
+			/*
+			 * Use a higher priority than libc_fs to let the libc prefer
+			 * us when '_dev_name' is accessed.
+			 */
+			enum { PRIORITY = 1 };
+
 		public:
 
 			/**
 			 * Constructor
 			 */
-			Plugin() { }
+			Plugin() : Libc::Plugin(PRIORITY) { }
 
 			bool supports_stat(const char *path)
 			{
