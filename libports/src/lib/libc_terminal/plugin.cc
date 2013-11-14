@@ -317,6 +317,13 @@ namespace {
 						winsize->ws_col = terminal_size.columns();
 						return 0;
 					}
+				case TIOCMGET:
+					{
+						uint32_t *status = (uint32_t *)argp;
+						if (status)
+							*status = 0;
+						return 0;
+					}
 				}
 				return -1;
 			}
