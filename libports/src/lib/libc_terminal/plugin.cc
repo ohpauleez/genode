@@ -118,7 +118,9 @@ namespace {
 			 * Set/get file status status flags
 			 */
 			void status_flags(int flags) { _status_flags = flags; }
-			int status_flags() { return _status_flags; }
+			int  status_flags() { return _status_flags; }
+
+			bool buffered() const { return !!(_status_flags & O_NONBLOCK); }
 	};
 
 
@@ -142,6 +144,58 @@ namespace {
 			 * us when '_dev_name' is accessed.
 			 */
 			enum { PRIORITY = 1 };
+
+			/**
+			 * Utility for the buffered output of small successive write
+			 * operations
+			 */
+			template <size_t SIZE>
+			struct Write_buffer
+			{
+				typedef Genode::size_t size_t;
+
+				char buf[SIZE];
+
+				/* index of next character within 'buf' to write */
+				unsigned index = 0;
+
+				void flush(Terminal::Connection &terminal)
+				{
+					/* flush buffered characters to LOG */
+					terminal.write(buf, index);
+
+					/* reset */
+					index = 0;
+				}
+
+				void append(char c)
+				{
+					buf[index++] = c;
+				}
+
+				size_t remaining_capacity() const { return SIZE - index; }
+			};
+			
+			Write_buffer<256> _write_buffer;
+
+			Genode::size_t _buffered_write(Terminal::Connection &terminal,
+			                               char const *src, size_t num_bytes)
+			{
+				size_t const consume_bytes =
+					Genode::min(num_bytes, _write_buffer.remaining_capacity());
+
+				for (unsigned i = 0; i < consume_bytes; i++) {
+					char const c = src[i];
+					_write_buffer.append(c);
+					if (c == '\n')
+						_write_buffer.flush(terminal);
+				}
+
+				if (_write_buffer.remaining_capacity() == 0)
+					_write_buffer.flush(terminal);
+
+				return consume_bytes;
+			}
 
 		public:
 
@@ -266,6 +320,9 @@ namespace {
 
 			ssize_t write(Libc::File_descriptor *fd, const void *buf, ::size_t count)
 			{
+				if (context(fd)->buffered())
+					return _buffered_write(*context(fd), (char *)buf, count);
+
 				Genode::size_t chunk_size = context(fd)->io_buffer_size();
 
 				Genode::size_t written_bytes = 0;
@@ -299,7 +356,19 @@ namespace {
 			{
 				switch (cmd) {
 					case F_GETFL: return context(fd)->status_flags();
-					default: PERR("fcntl(): command %d not supported", cmd); return -1;
+					case F_SETFL:
+						{
+							/*
+							 * Replace O_NONBLOCK and O_APPEND flags by the
+							 * corresponding bits supplied as argument.
+							 */
+							long flags = context(fd)->status_flags()
+							           & ~(O_NONBLOCK|O_APPEND);
+							flags |= arg & (O_NONBLOCK|O_APPEND);
+							context(fd)->status_flags(flags);
+							return 0;
+						}
+					default: PERR("fcntl(): command %d not supported (arg=%ld)", cmd, arg); return -1;
 				}
 			}
 
