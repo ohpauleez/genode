@@ -50,7 +50,11 @@ typedef Genode::Path<PATH_MAX_LEN> Canonical_path;
 static File_system::Session *file_system()
 {
 	static Genode::Allocator_avl tx_buffer_alloc(Genode::env()->heap());
-	static File_system::Connection fs(tx_buffer_alloc);
+#ifdef GENODE_LIBC_RAM_FS
+	static File_system::Connection fs(tx_buffer_alloc, 5*1024*1024, "ram");
+#else
+	static File_system::Connection fs(tx_buffer_alloc, 5*1024*1024);
+#endif
 	return &fs;
 }
 
@@ -212,7 +216,13 @@ class Plugin : public Libc::Plugin
 		/**
 		 * Constructor
 		 */
+#ifdef GENODE_LIBC_RAM_FS
+		enum { PRIORITY = 1 }; /* prefer libc_ram_fs over libc_fs */
+		Plugin() : Libc::Plugin(PRIORITY) { }
+#else
 		Plugin() { }
+#endif
+
 
 		~Plugin() { }
 
@@ -225,6 +235,9 @@ class Plugin : public Libc::Plugin
 
 		bool supports_open(const char *pathname, int flags)
 		{
+#ifdef GENODE_LIBC_RAM_FS
+			return Genode::strcmp(pathname, "/ram", 4) == 0;
+#endif
 			if (verbose)
 				PDBG("pathname = %s", pathname);
 			return true;
@@ -246,6 +259,9 @@ class Plugin : public Libc::Plugin
 
 		bool supports_stat(const char *path)
 		{
+#ifdef GENODE_LIBC_RAM_FS
+			return Genode::strcmp(path, "/ram", 4) == 0;
+#endif
 			if (verbose)
 				PDBG("path = %s", path);
 			return true;
@@ -815,7 +831,11 @@ class Plugin : public Libc::Plugin
 } /* unnamed namespace */
 
 
+#ifdef GENODE_LIBC_RAM_FS
+void __attribute__((constructor)) init_libc_ram_fs(void)
+#else
 void __attribute__((constructor)) init_libc_fs(void)
+#endif
 {
 	PDBG("using the libc_fs plugin");
 	static Plugin plugin;
