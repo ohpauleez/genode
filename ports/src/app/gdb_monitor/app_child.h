@@ -196,9 +196,11 @@ namespace Gdb_monitor {
 						return cap;
 					}
 
-					void upgrade(Session_capability, Upgrade_args const &)
+					void upgrade(Session_capability sc, Upgrade_args const &args)
 					{
-						PDBG("not yet implemented");
+						try { _child_root.upgrade(sc, args); }
+						catch (Genode::Root::Invalid_args) { throw Invalid_args(); }
+						catch (Genode::Ipc_error)          { throw Unavailable(); }
 					}
 
 					void close(Session_capability session_cap)
