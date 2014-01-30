@@ -276,9 +276,9 @@ int main(int argc, char **argv)
 	static Genode::Slave  usb_slave(usb_ep, usb_policy, 12*1024*1024);
 
 	/* create ATAPI driver */
-	static Rpc_entrypoint atapi_ep(&cap, STACK_SIZE, "atapi_slave");
-	static Atapi_policy   atapi_policy(atapi_ep, block_driver_registry);
-	static Genode::Slave  atapi_slave(atapi_ep, atapi_policy, 1024*1024);
+//	static Rpc_entrypoint atapi_ep(&cap, STACK_SIZE, "atapi_slave");
+//	static Atapi_policy   atapi_policy(atapi_ep, block_driver_registry);
+//	static Genode::Slave  atapi_slave(atapi_ep, atapi_policy, 1024*1024);
 
 	/* initialize input service */
 	static Input::Root input_root(&ep, env()->heap(), input_source_registry);
