@@ -76,6 +76,11 @@ class Genode::Slab_backend_alloc : public Genode::Allocator,
 
 				/* lookup phys. address */
 				_ds_phys[_index] = Dataspace_client(_ds_cap[_index]).phys_addr();
+			
+				if (!_cached && _ds_phys[_index] > ~0U) {
+					PERR("ERROR 4G issue - phys addr %lx cached %u", _ds_phys[_index], _cached); 
+					while (1) {}
+				}
 			} catch (...) { return false; }
 
 			/* return base + offset in VM area */
