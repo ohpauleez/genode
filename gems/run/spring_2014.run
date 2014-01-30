@@ -1,0 +1,1625 @@
+set build_components {
+	core init drivers/timer
+	noux/minimal
+	lib/libc_noux
+	drivers/framebuffer
+	drivers/pci
+	drivers/input
+	drivers/acpi
+	drivers/usb
+	drivers/nic
+	drivers/atapi
+	drivers/ahci
+	drivers/rtc
+	server/terminal
+	server/ram_fs
+	server/nic_bridge
+	server/nitpicker
+	server/fade_fb
+	server/fs_rom
+	server/nit_fb
+	server/terminal_log
+	server/d3m
+	server/iso9660
+	server/loader
+	server/liquid_framebuffer
+	server/tar_rom
+	server/tar_fs
+	server/terminal_crosslink
+	server/rom_prefetcher
+	test/libports/ncurses
+	test/nitpicker
+	app/mupdf
+	app/backdrop
+	app/lighttpd
+	app/launchpad
+	app/scout
+	app/gdb_monitor
+	app/cli_monitor
+	vancouver
+	lib/trace/policy/rpc_name server/trace_fs
+	virtualbox
+	server/fuse_fs/ext2
+	server/part_blk
+}
+
+#
+# Comment out this line to skip the long-taking build of Qt
+#
+append build_components {
+	app/arora app/qt5/examples/textedit app/qt5/qt_launchpad
+	app/qt5/examples/samegame
+	lib/qt5/qtdeclarative/src/imports/qtquick2
+}
+
+#
+# Build Noux packages only once
+#
+set noux_pkgs {bash coreutils vim grep gdb_x86 findutils which gcc_x86 binutils_x86 make }
+foreach pkg $noux_pkgs {
+	lappend_if [expr ![file exists bin/$pkg]] build_components noux-pkg/$pkg }
+
+build $build_components
+
+
+#########################
+## Assemble boot image ##
+#########################
+
+create_boot_directory
+
+
+##
+# Utility: Return list with prefix added to each element
+#
+proc add_prefix {prefix list} {
+	set result {}
+	foreach element $list { lappend result "$prefix$element" }
+	return $result
+}
+
+
+# write default vimrc file
+set vimrc_fd [open "bin/vim/share/vim/vimrc" w]
+puts $vimrc_fd {
+set noloadplugins
+set hls
+set nocompatible
+set laststatus=2
+set noswapfile
+set viminfo=
+set ts=2}
+close $vimrc_fd
+
+#
+# Archive Noux packages, stip binaries before archiving
+#
+exec sh -c "find [add_prefix "bin/" $noux_pkgs] -type f | (xargs [cross_dev_prefix]strip || true) 2>/dev/null"
+
+exec ln -sf bash bin/bash/bin/sh
+
+foreach pkg $noux_pkgs { exec tar cfv  bin/$pkg.tar -h -C bin/$pkg . }
+
+#
+# Archive binaries and source codes needed for GDB monitor test
+#
+
+# names of the binaries needed for the GDB monitor test
+set test_binaries { nitpicker }
+
+# tar archive for the unstripped binaries of the GDB monitor test
+foreach test_binary $test_binaries {
+	exec tar ufv bin/test-gdb_monitor.tar -h -C bin $test_binary }
+
+# tar archive for the source code of the debugging target.
+# Currently, directories need to have their own tar records.
+if {![file exists bin/test-gdb_monitor-src.tar]} {
+	exec mkdir -p bin/test-gdb_monitor-src
+	puts "archiving source codes of debugging targets: $test_binaries"
+	foreach test_binary $test_binaries {
+		set source_files [ exec [cross_dev_prefix]objdump -dl bin/$test_binary | grep "^/.*:.*" | sed -e "s/:.*//" | uniq ]
+		foreach source_file $source_files {
+			if [file exists $source_file] {
+				set dirname [ exec dirname $source_file]
+				exec mkdir -p bin/test-gdb_monitor-src$dirname
+				exec ln -sf  $source_file bin/test-gdb_monitor-src$source_file
+			}
+		}
+	}
+	exec tar chf bin/test-gdb_monitor-src.tar -C bin/test-gdb_monitor-src .
+}
+
+set gdb_config_fd [open "bin/gdb_command_config" w]
+puts $gdb_config_fd {<config>
+	<parent-provides>
+		<service name="ROM"/>
+		<service name="RAM"/>
+		<service name="CAP"/>
+		<service name="PD"/>
+		<service name="RM"/>
+		<service name="CPU"/>
+		<service name="LOG"/>
+		<service name="SIGNAL"/>
+		<service name="Timer"/>
+		<service name="Nitpicker"/>
+		<service name="File_system"/>
+	</parent-provides>
+	<start name="GDB">
+		<binary name="liquid_fb"/>
+		<resource name="RAM" quantum="6M"/>
+		<provides>
+			<service name="Framebuffer"/>
+			<service name="Input"/>
+		</provides>
+		<route>
+			<any-service><parent/><any-child/></any-service>
+		</route>
+		<config xpos="600" ypos="150" width="640" height="480" title="GDB" animate="off"/>
+	</start>
+	<start name="terminal">
+		<resource name="RAM" quantum="4M"/>
+		<provides><service name="Terminal"/></provides>
+		<route>
+			<service name="Framebuffer"><child name="GDB"/></service>
+			<service name="Input"><child name="GDB"/></service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+	<start name="terminal_gdb">
+		<binary name="terminal_crosslink"/>
+		<resource name="RAM" quantum="1M"/>
+		<provides> <service name="Terminal"/> </provides>
+		<route>
+			<any-service><parent/><any-child/></any-service>
+		</route>
+	</start>
+	<start name="noux">
+		<resource name="RAM" quantum="50M"/>
+		<route>
+			<service name="Terminal">
+				<if-arg key="label" value=""/><child name="terminal"/>
+			</service>
+			<service name="Terminal">
+				<if-arg key="label" value="noux(terminal_fs)"/><child name="terminal_gdb"/>
+			</service>
+			<any-service> <any-child/> <parent/> </any-service>
+		</route>
+		<config>
+
+			<!-- the GDB <start> node gets generated above this comment -->
+
+			<fstab>
+				<fs label="gdb"/>
+				<dir name="dev"> <terminal name="gdb"/> </dir>
+			</fstab>
+		</config>
+	</start>
+	<start name="gdb_monitor">
+
+		<!-- the <config> node gets generated above this comment -->
+
+		<resource name="RAM" quantum="1G"/>
+		<route>
+			<service name="Terminal"><child name="terminal_gdb"/></service>
+			<any-service> <any-child/> <parent/> </any-service>
+		</route>
+	</start>
+</config>}
+close $gdb_config_fd
+
+#
+# Archive relevant genode source code for the tool-chain demo
+#
+if {![file exists bin/genode.tar]} {
+	puts "archiving genode source code..."
+	set genode_repositories "tool base base-nova os demo"
+	foreach rep $genode_repositories { append genode_repositories_filter_out_find " -not -name $rep " }
+	set genode_repositories_filter_out [exec sh -c "find [genode_dir] -mindepth 1 -maxdepth 1 $genode_repositories_filter_out_find -printf \"%f \""]
+	foreach rep $genode_repositories_filter_out { append genode_repositories_filter_out_tar " --exclude=./$rep " }
+	set tar_command "tar cfv bin/genode.tar $genode_repositories_filter_out_tar -C $genode_dir ."
+	eval exec $tar_command
+}
+
+if {![file exists bin/qt5_fs.tar]} {
+exec tar chf bin/qt5_fs.tar -C bin/qt5_fs .
+}
+
+#
+# Boot modules
+#
+
+# generic modules
+set boot_modules {
+	core init timer ld.lib.so noux terminal ram_fs acpi_drv d3m usb_drv
+	atapi_drv loader testnit nit_fb nic_drv tar_rom rtc_drv
+	nitpicker fade_fb fs_rom terminal_log iso9660 backdrop ahci
+	nic_bridge mupdf rom_prefetcher cli_monitor
+	sticks_blue.png sticks_blue_1600x900.png sticks_blue_1280x800.png
+	part_blk ext2_fuse_fs libc.lib.so
+	libc_block.lib.so libc_log.lib.so
+}
+
+# platform-specific modules
+lappend_if [have_spec linux]       boot_modules fb_sdl
+lappend_if [have_spec pci]         boot_modules pci_drv
+lappend_if [have_spec pci]         boot_modules pci_device_pd
+lappend_if [have_spec framebuffer] boot_modules fb_drv
+lappend_if [have_spec ps2]         boot_modules ps2_drv
+
+# include all '*.config' files found in demo/config as ROM modules
+#foreach config [glob [genode_dir]/demo/config/*.config] {
+#	set filename [file tail $config]
+#	file copy -force $config bin/$filename
+#	lappend boot_modules $filename
+#}
+
+#
+# Sync binary supplements for backdrop and mupdf
+#
+if {![file exists bin/slides.pdf]} {
+	file copy -force /home/no/src/doc/vortraege/fosdem_2014_nf/slides.pdf bin/slides.pdf }
+file copy -force [genode_dir]/demo/src/app/backdrop/sticks_blue.png bin/sticks_blue.png
+file copy -force [genode_dir]/demo/src/app/backdrop/sticks_blue_1600x900.png bin/sticks_blue_1600x900.png
+
+##
+# Download file if it does not exist already
+#
+# \param dst  path of destination
+#
+proc download_if_needed {url dst} {
+
+	if {![file exists $dst]} {
+		puts "downloading '$dst' from '$url' ..."
+		catch { exec wget $url -O $dst }
+	}
+}
+
+#
+# Download binary supplements for seoul demo
+#
+set files_from_genode_org [list munich tc-browser.gz bzImage-3.1]
+foreach file $files_from_genode_org {
+	download_if_needed http://genode.org/files/seoul/$file bin/$file }
+
+#
+# Download movie for avplay demo
+#
+if {![file exists bin/mediafile]} {
+	download_if_needed http://genode.org/files/nova_demo-13.09/mediafile bin/mediafile }
+
+#
+# lighttpd configuration
+#
+exec mkdir -p bin/genode_org/etc/lighttpd
+set fd [open "bin/genode_org/etc/lighttpd/lighttpd.conf" w]
+puts $fd {
+server.port                    = 80
+server.document-root           = "/website"
+server.event-handler           = "select"
+server.network-backend         = "write"
+server.max-keep-alive-requests = 0
+index-file.names               = ( "index", "index.html", "index.htm" )
+mimetype.assign                = (
+                                   ".png"  => "image/png",
+                                   ".jpg"  => "image/jpeg",
+                                   ".jpeg" => "image/jpeg",
+                                   ".gif"  => "image/gif",
+                                   ".css"  => "text/css",
+                                   ".html" => "text/html",
+                                   ".htm"  => "text/html",
+                                   ""      => "text/html",
+                                 ) }
+close $fd
+
+#
+# Mirror of genode.org website
+#
+
+# lighttpd configuration
+exec mkdir -p bin/genode_org/etc/lighttpd
+set fd [open "bin/genode_org/etc/lighttpd/lighttpd.conf" w]
+puts $fd {
+server.port                    = 80
+server.document-root           = "/website"
+server.event-handler           = "select"
+server.network-backend         = "write"
+server.max-keep-alive-requests = 0
+index-file.names               = ( "index", "index.html", "index.htm" )
+mimetype.assign                = (
+                                   ".png"  => "image/png",
+                                   ".jpg"  => "image/jpeg",
+                                   ".jpeg" => "image/jpeg",
+                                   ".gif"  => "image/gif",
+                                   ".css"  => "text/css",
+                                   ".html" => "text/html",
+                                   ".htm"  => "text/html",
+                                   ""      => "text/html",
+                                 ) }
+close $fd
+if {![file exists bin/genode_org/website/index]} {
+	puts "mirroring genode.org website to 'bin/genode_org/' ..."
+	exec mkdir -p bin/genode_org/website
+
+	# ignore wget errors
+	catch {
+		exec wget -nH -Lrc -P bin/genode_org/website http://genode.org
+	}
+}
+
+exec tar cfv bin/genode_org.tar -h -C bin/genode_org .
+
+#
+# Generate tar archive with plugin configuration
+#
+exec tar cf bin/nitpicker_plugin.tar -C [genode_dir]/ports/src/app/arora/demo/nitpicker_plugin config.plugin
+lappend misc nitpicker_plugin.tar
+
+# server
+lappend binaries "nitpicker"
+lappend binaries "tar_fs"
+lappend binaries "terminal_crosslink"
+lappend binaries "trace_fs"
+
+# apps
+lappend binaries "scout"
+lappend binaries "launchpad"
+lappend binaries "liquid_fb"
+lappend binaries "testnit"
+lappend binaries "lighttpd"
+#lappend binaries "gdb_monitor"
+lappend binaries "cli_monitor"
+lappend binaries "vancouver"
+lappend binaries "virtualbox"
+
+# qt applications
+lappend binaries "qt_launchpad"
+lappend binaries "textedit"
+lappend binaries "arora"
+lappend binaries "samegame"
+
+# linux
+lappend misc "bzImage-3.1"
+lappend misc "tc-browser.gz"
+lappend misc "munich"
+
+lappend misc mediafile
+lappend misc "genode_org.tar"
+lappend misc "bash.tar"
+lappend misc "coreutils.tar"
+lappend misc "vim.tar"
+lappend misc "gdb_x86.tar"
+lappend misc "test-gdb_monitor.tar"
+lappend misc "test-gdb_monitor-src.tar"
+lappend misc "findutils.tar"
+lappend misc "make.tar"
+lappend misc "grep.tar"
+lappend misc "which.tar"
+lappend misc "binutils_x86.tar"
+lappend misc "gcc_x86.tar"
+lappend misc "genode.tar"
+lappend misc "qt5_fs.tar"
+lappend misc "gdb_command_config"
+lappend misc "rpc_name"
+lappend misc "win7_overlay.vdi"
+
+if {![file exists bin/win7_overlay]} {
+	catch {
+	exec vboxmanage createhd --filename bin/win7_overlay --size 130048 --format vdi
+	exec chmod a+r bin/win7_overlay
+	}
+}
+
+# slides
+lappend misc "slides.pdf"
+
+# determine shared libraries
+regsub -all {bin/} [glob bin/*.lib.so] "" shared_libraries
+
+#
+# Copy content to CD
+#
+
+set data_provider "iso9660"
+#set data_provider "grub"
+#set data_provider "tar_rom"
+
+if {$data_provider == "iso9660"} {
+
+	# binaries
+	foreach i $binaries {
+		exec cp -L  bin/$i [run_dir]/$i
+		exec strip -d [run_dir]/$i
+	}
+
+	# also redundantly add the boot modules to simplify the config
+	foreach i $boot_modules {
+		catch {
+			exec cp -L bin/$i [run_dir]/$i
+			exec strip -d [run_dir]/$i
+		}
+	}
+
+	# shared libraries
+	foreach i $shared_libraries {
+		catch {
+			exec cp -L bin/$i [run_dir]/$i
+			exec strip -d [run_dir]/$i
+		}
+	}
+
+	# misc.
+	foreach i $misc {
+		exec cp -L bin/$i [run_dir]/$i
+	}
+}
+
+if {$data_provider == "grub"} {
+
+	# supply all data as ROM modules
+	append boot_modules " $binaries $shared_libraries $misc "
+}
+
+if {$data_provider == "tar_rom"} {
+
+	# binaries
+	set my_path [exec pwd]
+	set tmp "/tmp/data"
+	exec mkdir -p $tmp
+
+	foreach i $binaries {
+		exec cp -L $my_path/bin/$i $tmp/
+		exec strip -d $tmp/$i
+	}
+
+	# also redundantly add the boot modules to simplify the config
+	foreach i $boot_modules {
+		exec cp -L $my_path/bin/$i $tmp/
+		catch { exec strip -d $tmp/$i }
+	}
+	
+	# shared libraries
+	foreach i $shared_libraries {
+		exec cp -L $my_path/bin/$i $tmp/
+		exec strip -d $tmp/$i
+	}
+	
+	# misc.
+	foreach i $misc {
+		exec cp -L $my_path/bin/$i $tmp/
+	}
+
+	exec sh -c "cd $tmp; tar cfz $my_path/bin/data.tar.gz *"
+	exec rm -r $tmp
+
+	# supply all data as ROM modules
+	append boot_modules " data.tar.gz "
+}
+
+
+#######################################
+## Configuration of the init process ##
+#######################################
+
+set config {
+<config>
+	<parent-provides>
+		<service name="ROM"/>
+		<service name="LOG"/>
+		<service name="CAP"/>
+		<service name="RAM"/>
+		<service name="RM"/>
+		<service name="CPU"/>
+		<service name="PD"/>
+		<service name="IRQ"/>
+		<service name="IO_PORT"/>
+		<service name="IO_MEM"/>
+		<service name="SIGNAL"/>
+		<service name="TRACE"/>
+	</parent-provides>
+	<default-route>
+		<service name="IRQ"> <child name="acpi" /> </service>
+		<any-service> <parent/> <any-child/> </any-service>
+	</default-route>
+	<start name="timer">
+		<resource name="RAM" quantum="1M"/>
+		<provides><service name="Timer"/></provides>
+		<route> <any-service> <parent/> </any-service> </route>
+	</start>
+	<start name="acpi">
+		<resource name="RAM" quantum="16M"/>
+		<binary name="acpi_drv"/>
+		<provides>
+			<service name="PCI"/>
+			<service name="IRQ" />
+		</provides>
+		<route>
+			<any-service> <parent/> <any-child /> </any-service>
+		</route>
+	</start>
+	<start name="fb_drv">
+		<resource name="RAM" quantum="5M"/>
+		<provides><service name="Framebuffer"/></provides>
+		<config buffered="yes" preinit="yes" />
+	</start>
+	<start name="d3m">
+		<resource name="RAM" quantum="26M"/>
+		<provides>
+			<service name="Input"/>
+			<!--<service name="Nic"/>-->
+			<service name="Block"/>
+		</provides>
+	</start>
+	<start name="rom_provider">
+		<binary name="iso9660" />
+		<resource name="RAM" quantum="550M"/>
+		<provides><service name="ROM"/></provides>
+		<route>
+			<service name="LOG"> <child name="terminal_log"/> </service>
+			<service name="Block"> <child name="d3m"/> </service>
+			<any-service> <parent/> </any-service> </route>
+	</start>
+	<start name="rom_prefetcher">
+		<resource name="RAM" quantum="1M"/>
+		<provides><service name="ROM"/></provides>
+		<route>
+			<service name="LOG"> <child name="terminal_log"/> </service>
+			<service name="ROM"> <child name="rom_provider"/> </service>
+			<any-service> <parent/> <any-child /> </any-service> </route>
+		<config>
+}
+
+foreach path "[glob bin/*.lib.so] [glob bin/*.tar]" {
+	set file [file tail $path]
+	append config "			<rom name=\"$file\" />\n" }
+
+append config {
+		</config>
+	</start>
+
+	<start name="nic_drv">
+		<resource name="RAM" quantum="2M"/>
+		<provides><service name="Nic"/></provides>
+	</start>
+	<start name="nic_bridge">
+		<resource name="RAM" quantum="4M"/>
+		<provides><service name="Nic"/></provides>
+		<config>
+			<policy label="cli_monitor -> lighttpd" ip_addr="10.0.2.55"/>
+			<policy label="cli_monitor -> arora_static" ip_addr="10.0.2.56"/>
+		</config>
+		<route>
+			<service name="Nic"> <child name="nic_drv"/> </service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+	<start name="nitpicker">
+		<resource name="RAM" quantum="1M"/>
+		<provides><service name="Nitpicker"/></provides>
+		<route>
+			<service name="ROM">
+				<if-arg key="filename" value="nitpicker.config" />
+				<child name="config_rom"/>
+			</service>
+			<any-service> <child name="fb_drv" />
+			              <child name="d3m" />
+			              <parent/> <any-child/> </any-service>
+		</route>
+		<configfile name="nitpicker.config" />
+	</start>
+	<start name="backdrop">
+		<resource name="RAM" quantum="4M"/>
+		<config>
+			<image>sticks_blue.png</image>
+		</config>
+	</start>
+	<start name="terminal_cli">
+		<binary name="terminal"/>
+		<resource name="RAM" quantum="1M"/>
+		<provides><service name="Terminal"/></provides>
+		<route>
+			<any-service> <child name="nit_fb_cli" />
+			              <parent/> <any-child/> </any-service>
+		</route>
+		<config>
+			<font size="12"/>
+		</config>
+	</start>
+	<start name="nit_fb_cli">
+		<binary name="fade_fb" />
+		<resource name="RAM" quantum="4M"/>
+		<provides>
+			<service name="Input"/>
+			<service name="Framebuffer"/>
+		</provides>
+		<configfile name="nit_fb_cli.config"/>
+		<route>
+			<service name="ROM">
+				<if-arg key="filename" value="nit_fb_cli.config" />
+				<child name="config_rom"/>
+			</service>
+			<any-service> <child name="nitpicker" />
+			              <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+	<start name="nit_fb_log_terminal">
+		<binary name="terminal"/>
+		<resource name="RAM" quantum="1M"/>
+		<provides><service name="Terminal"/></provides>
+		<route>
+			<any-service> <child name="nit_fb_log" />
+			              <child name="nit_fb_log" />
+			              <parent/> <any-child/> </any-service>
+		</route>
+		<config>
+			<font size="8"/>
+		</config>
+	</start>
+	<start name="terminal_log">
+		<binary name="terminal_log"/>
+		<resource name="RAM" quantum="1M"/>
+		<provides><service name="LOG"/></provides>
+		<route>
+			<any-service> <child name="nit_fb_log_terminal" />
+			              <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+	<start name="config_rom">
+		<binary name="fs_rom" />
+		<resource name="RAM" quantum="10M"/>
+		<provides><service name="ROM"/></provides>
+		<route>
+			<service name="File_system"> <child name="config_fs" /> </service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+	<start name="nit_fb_log">
+		<binary name="fade_fb" />
+		<resource name="RAM" quantum="4M"/>
+		<provides>
+			<service name="Input"/>
+			<service name="Framebuffer"/>
+		</provides>
+		<configfile name="nit_fb_log.config"/>
+		<route>
+			<service name="ROM">
+				<if-arg key="filename" value="nit_fb_log.config" />
+				<child name="config_rom"/>
+			</service>
+			<any-service> <child name="nitpicker" />
+			              <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+	<start name="mupdf">
+		<resource name="RAM" quantum="110M"/>
+		<config>
+			<pdf name="slides.pdf"/>
+		</config>
+		<route>
+			<service name="LOG"> <child name="terminal_log"/>  </service>
+			<service name="ROM"> <child name="rom_provider"/> </service>
+			<any-service> <child name="nitpicker" />
+			              <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+	<start name="loader">
+		<resource name="RAM" quantum="2M"></resource>
+		<provides><service name="Loader"/></provides>
+		<route>
+			<service name="ROM">
+				<if-arg key="filename" value="hypervisor_info_page" />
+				<parent/>
+			</service>
+			<service name="LOG"> <child name="terminal_log"/> </service>
+			<service name="ROM"> <child name="rom_provider"/> </service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+	<start name="rtc_drv">
+		<resource name="RAM" quantum="1M"/>
+		<provides><service name="Rtc"/></provides>
+	</start>
+	<start name="ahci">
+		<binary name="ahci" />
+		<resource name="RAM" quantum="10M" />
+		<provides><service name="Block" /></provides>
+		<route>
+			<service name="IRQ"><child name="acpi" /></service>
+			<any-service> <parent /> <any-child /></any-service>
+		</route>
+	</start>
+	<start name="part_blk">
+		<resource name="RAM" quantum="10M" />
+		<provides><service name="Block" /></provides>
+		<route>
+			<any-service><child name="ahci"/> <parent/><any-child/></any-service>
+		</route>
+		<config>
+			<policy label="ext2_fuse_fs" partition="3"/>
+		</config>
+	</start>
+	<start name="ext2_fuse_fs">
+		<resource name="RAM" quantum="10M"/>
+		<provides><service name="File_system"/></provides>
+		<route>
+			<any-service><child name="part_blk"/> <parent/><any-child/></any-service>
+		</route>
+		<config>
+			<policy label="" root="/" writeable="no" />
+		</config>
+	</start>
+	<start name="shared_fs">
+		<binary name="ram_fs" />
+		<resource name="RAM" quantum="15M"/>
+		<provides><service name="File_system"/></provides>
+		<config>
+			<policy label=""  root="/" writeable="yes" />
+		</config>
+	</start>
+	<start name="config_fs">
+		<binary name="ram_fs" />
+		<resource name="RAM" quantum="10M"/>
+		<provides><service name="File_system"/></provides>
+		<config>
+			<content>
+				<inline name="test.sh">#!/bin/bash
+for i in `seq 100`; do echo test $i; mv init.config.0 init.config; sleep 0.2; mv init.config init.config.0; sleep 0.2; done
+echo "test succeeded"
+</inline>
+				<inline name="nit_fb_log.config">
+<config xpos="640" ypos="40" width="360" height="615"/>
+				</inline>
+				<inline name="nit_fb_cli.config">
+<config xpos="4" ypos="24" width="410" height="715"/>
+				</inline>
+				<inline name="nit_fb_noux.config">
+<config xpos="220" ypos="40" width="400" height="345"/>
+				</inline>
+
+				<inline name="nitpicker.config">
+<config>
+	<global-keys>
+		<key name="KEY_SCROLLLOCK" operation="xray" />
+		<key name="KEY_SYSRQ"      operation="kill" />
+		<key name="KEY_PRINT"      operation="kill" />
+		<key name="KEY_F11"        operation="kill" />
+		<key name="KEY_F12"        operation="xray" />
+	</global-keys>
+	<policy label="cli_monitor"               color="#7070ff"/>
+	<policy label="cli_monitor -> intro"      color="#ffff70"/>
+	<policy label="cli_monitor -> arora"      color="#70ff70"/>
+	<policy label="cli_monitor -> media"      color="#dd00ff"/>
+	<policy label="cli_monitor -> config"     color="#ff0000"/>
+	<policy label="cli_monitor -> tool_chain" color="#00ffff"/>
+</config>
+			</inline>
+
+				<inline name="media.config">
+<config>
+	<mediafile name="mediafile"/>
+	<!-- <framebuffer_filter name="cube_fb" ram_quota="4M"/> -->
+</config>
+				</inline>
+
+
+				<inline name="vmm.config">
+				</inline>
+
+
+				<inline name="debugging.config">
+<config>
+	<parent-provides>
+		<service name="ROM"/>
+		<service name="LOG"/>
+		<service name="CAP"/>
+		<service name="RAM"/>
+		<service name="RM"/>
+		<service name="CPU"/>
+		<service name="PD"/>
+		<service name="SIGNAL"/>
+		<service name="Timer"/>
+		<service name="Nitpicker"/>
+	</parent-provides>
+	<default-route>
+		<any-service> <parent/> <any-child/> </any-service>
+	</default-route>
+	<start name="nit_fb_target">
+		<binary name="fade_fb" />
+		<resource name="RAM" quantum="4M"/>
+		<provides>
+			<service name="Input"/>
+			<service name="Framebuffer"/>
+		</provides>
+		<config xpos="220" ypos="40" width="400" height="345"/>
+	</start>
+	<start name="nit_fb_gdb">
+		<binary name="fade_fb" />
+		<resource name="RAM" quantum="4M"/>
+		<provides>
+			<service name="Input"/>
+			<service name="Framebuffer"/>
+		</provides>
+		<config xpos="220" ypos="400" width="400" height="345"/>
+	</start>
+	<start name="terminal_noux">
+		<binary name="terminal" />
+		<resource name="RAM" quantum="2M"/>
+		<provides><service name="Terminal"/></provides>
+		<config>
+			<keyboard layout="de"/>
+			<font size="12" />
+		</config>
+		<route>
+			<any-service> <child name="nit_fb_gdb"/> <parent/> </any-service>
+		</route>
+	</start>
+	<start name="terminal_gdb">
+		<binary name="terminal_crosslink"/>
+		<resource name="RAM" quantum="1M"/>
+		<provides> <service name="Terminal"/> </provides>
+	</start>
+
+	<start name="gdb_monitor">
+		<resource name="RAM" quantum="10M"/>
+		<route>
+			<service name="Terminal"><child name="terminal_gdb"/></service>
+			<any-service> <child name="nit_fb_target"/><parent/><any-child/></any-service>
+		</route>
+		<config>
+			<target name="nitpicker"/>
+			<preserve name="RAM" quantum="5M"/>
+		</config>
+		<provides><service name="Nitpicker"/></provides>
+	</start>
+
+	<start name="ram_fs">
+		<resource name="RAM" quantum="10M"/>
+		<provides><service name="File_system"/></provides>
+		<config>
+			<content>
+				<dir name="gdb">
+					<inline name="commands">
+						set interactive-mode off
+						directory /gdb/src
+						target remote /dev/gdb
+						symbol-file /gdb/nitpicker
+						set interactive-mode on
+					</inline>
+				</dir>
+			</content>
+			<!-- constrain sessions according to their labels -->
+			<policy label="noux -> gdb" root="/gdb" />
+		</config>
+	</start>
+
+	<!-- client of nitpicker, which is running in gdb -->
+	<start name="launchpad">
+		<resource name="RAM" quantum="14M"/>
+		<config xpos="50" ypos="10" width="400" height="400">
+			<launcher><filename>testnit</filename><ram_quota>512K</ram_quota></launcher>
+			<launcher><filename>launchpad</filename><ram_quota>6M</ram_quota>
+				<config xpos="90" ypos="50" width="400" height="400">
+					<launcher><filename>testnit</filename><ram_quota>512K</ram_quota></launcher>
+				</config>
+			</launcher>
+		</config>
+		<route>
+			<any-service><child name="gdb_monitor" /><parent/><any-child/></any-service>
+		</route>
+	</start>
+	<start name="noux">
+		<resource name="RAM" quantum="1G"/>
+		<route>
+			<service name="Terminal">
+				<if-arg key="label" value=""/><child name="terminal_noux"/>
+			</service>
+			<service name="Terminal">
+				<if-arg key="label" value="noux(terminal_fs)"/><child name="terminal_gdb"/>
+			</service>
+			<any-service><parent/><any-child/></any-service>
+		</route>
+		<config>
+			<fstab>
+				<tar name="gdb_x86.tar" at="/"/>
+				<dir name="dev"><terminal name="gdb"/></dir>
+				<dir name="gdb">
+					<tar name="test-gdb_monitor.tar"/>
+					<fs label="gdb"/>
+					<dir name="src"> <tar name="test-gdb_monitor-src.tar"/> </dir>
+				</dir>
+			</fstab> 
+			<start name="/bin/genode-x86-gdb"> 
+				<arg value="/gdb/nitpicker"/>
+				<arg value="-x" /><arg value="/gdb/commands" />
+			</start>
+		</config>
+	</start>
+</config>
+				</inline>
+
+			</content>
+			<policy label="cli_monitor -> config -> noux -> config"  root="/" writeable="yes" />
+			<policy label="config_rom"  root="/" />
+		</config>
+	</start>
+
+	<start name="cli_monitor">
+		<resource name="RAM" quantum="3G"/>
+		<route>
+			<service name="LOG"> <child name="terminal_log"/>  </service>
+			<service name="LOG"> <parent/>  </service>
+
+			<service name="Terminal"> <child name="terminal_cli" /> </service>
+
+			<service name="File_system">
+				<if-arg key="label" value="config -> noux -> config" />
+				<child name="config_fs" />
+			</service>
+
+			<service name="File_system">
+				<if-arg key="label" value="config -> noux -> shared" />
+				<child name="shared_fs" />
+			</service>
+
+			<service name="File_system">
+				<if-arg key="label" value="win7 -> vbox" />
+				<child name="ext2_fuse_fs" />
+			</service>
+
+			<service name="File_system">
+				<if-arg key="label" value="helenos -> vbox" />
+				<child name="ext2_fuse_fs" />
+			</service>
+
+			<service name="ROM">
+				<if-arg key="filename" value="nit_fb_noux.config" />
+				<child name="config_rom"/>
+			</service>
+
+			<service name="ROM">
+				<if-arg key="filename" value="media.config" />
+				<child name="config_rom"/>
+			</service>
+
+			<service name="ROM">
+				<if-arg key="filename" value="tool_chain.config" />
+				<child name="config_rom"/>
+			</service>
+
+			<service name="ROM">
+				<if-arg key="filename" value="debugging.config" />
+				<child name="config_rom"/>
+			</service>
+
+			<service name="ROM">
+				<if-arg key="filename" value="vmm.config" />
+				<child name="config_rom"/>
+			</service>
+
+			<service name="ROM">
+				<if-arg key="filename" value="arora.config" />
+				<child name="config_rom"/>
+			</service>
+
+			<service name="ROM">
+				<if-arg key="filename" value="hypervisor_info_page" />
+				<parent/>
+			</service>
+
+			<service name="Nitpicker"> <child name="nitpicker"/> </service>
+			<service name="Timer"> <child name="timer"/> </service>
+			<service name="Loader"> <child name="loader"/> </service>
+			<service name="Nic"> <child name="nic_bridge"/> </service>
+			<service name="ROM"> <child name="rom_provider"/> </service>
+			<service name="PCI"> <child name="acpi"/> </service>
+			<service name="Rtc"> <child name="rtc_drv"/> </service>
+
+			<any-service> <parent/> </any-service>
+		</route>
+		<config>
+
+<!-- Genode tool chain -->
+
+			<subsystem name="tool_chain" help="Genode tool chain">
+				<resource name="RAM" quantum="256M" />
+					<binary name="init" />
+<config>
+	<parent-provides>
+		<service name="ROM"/>
+		<service name="LOG"/>
+		<service name="CAP"/>
+		<service name="RAM"/>
+		<service name="RM"/>
+		<service name="CPU"/>
+		<service name="PD"/>
+		<service name="SIGNAL"/>
+		<service name="Timer"/>
+		<service name="Nitpicker"/>
+	</parent-provides>
+	<default-route>
+		<any-service> <any-child/> <parent/> </any-service>
+	</default-route>
+	<start name="liquid_fb">
+		<resource name="RAM" quantum="8M"/>
+		<config animate="off" xpos="300" ypos="160" width="576" height="408"
+		        title="Tool chain" />
+		<provides>
+			<service name="Input"/>
+			<service name="Framebuffer"/>
+		</provides>
+	</start>
+	<start name="terminal">
+		<resource name="RAM" quantum="2M"/>
+		<provides><service name="Terminal"/></provides>
+		<config>
+			<keyboard layout="de"/>
+		</config>
+	</start>
+	<start name="ram_fs">
+		<resource name="RAM" quantum="100M"/>
+		<provides><service name="File_system"/></provides>
+		<config>
+			<content>
+				<dir name="home">
+					<dir name="user">
+						<inline name=".bash_profile">
+							cp /bin/make /usr/bin/
+							cp /bin/echo /usr/bin/
+							cp /bin/mkdir /usr/bin/
+							echo "creating build directory..."
+							/genode/tool/create_builddir nova_x86_64 BUILD_DIR=/home/build
+							cd /home/build
+							echo "CROSS_DEV_PREFIX=genode-x86-" > etc/tools.conf
+							echo "now you can type, for example, \"make core\""
+						</inline>
+					</dir>
+				</dir>
+				<dir name="tmp" />
+				<dir name="usr">
+					<dir name="bin" />
+				</dir>
+			</content>
+
+			<!-- constrain sessions according to their labels -->
+			<policy label="noux -> root" root="/" />
+			<policy label="noux -> home" root="/home/user" writeable="yes" />
+			<policy label="noux -> tmp"  root="/tmp"       writeable="yes" />
+			<policy label="noux -> usr"  root="/usr"       writeable="yes" />
+		</config>
+	</start>
+	<start name="noux">
+		<resource name="RAM" quantum="1G" />
+		<config>
+			<fstab>
+				<tar name="bash.tar" />
+				<tar name="coreutils.tar" />
+				<tar name="vim.tar" />
+				<tar name="findutils.tar" />
+				<tar name="make.tar" />
+				<tar name="which.tar" />
+				<tar name="binutils_x86.tar" />
+				<tar name="gcc_x86.tar" />
+				<dir name="platform" />
+
+				<dir name="genode">
+					<tar name="genode.tar" />
+				</dir>
+
+				<dir name="dev">
+					<null />
+				</dir>
+
+				<dir name="home">
+					<fs label="home" />
+				</dir>
+
+				<dir name="tmp">
+					<fs label="tmp" />
+				</dir>
+
+				<dir name="usr">
+					<fs label="usr" />
+				</dir>
+			</fstab>
+			<start name="/bin/bash">
+				<env name="TERM" value="linux" />
+				<env name="HOME" value="/home" />
+				<env name="PATH" value="/bin" />
+				<arg value="--login" />
+			</start>
+		</config>
+	</start>
+</config>
+</subsystem>  <!-- Genode tool chain -->
+
+<subsystem name="arora_dhcp" help="Arora web browser">
+	<resource name="RAM" quantum="160M" />
+	<binary name="arora" />
+</subsystem>
+
+<subsystem name="intro" help="Genode introduction">
+	<resource name="RAM" quantum="64M" />
+	<binary name="scout" />
+</subsystem>
+
+<subsystem name="arora_static" help="Arora web browser">
+	<resource name="RAM" quantum="160M" />
+	<binary name="arora" />
+	<config>
+	<libc ip_addr="10.0.2.56"
+	           netmask="255.255.255.0"
+	           gateway="10.0.2.1"/>
+	</config>
+</subsystem>
+
+<subsystem name="textedit" help="Qt5 text editor">
+	<resource name="RAM" quantum="64M" />
+	<binary name="textedit" />
+</subsystem>
+
+<subsystem name="samegame" help="Qt5 QML example">
+	<resource name="RAM" quantum="128M" />
+	<binary name="init" />
+<config>
+	<parent-provides>
+		<service name="ROM"/>
+		<service name="RAM"/>
+		<service name="CAP"/>
+		<service name="PD"/>
+		<service name="RM"/>
+		<service name="CPU"/>
+		<service name="LOG"/>
+		<service name="SIGNAL"/>
+		<service name="Nitpicker"/>
+		<service name="Timer"/>
+	</parent-provides>
+
+	<default-route>
+		<any-service> <parent/> <any-child/> </any-service>
+	</default-route>
+
+	<start name="tar_fs">
+		<resource name="RAM" quantum="4M"/>
+		<provides> <service name="File_system"/> </provides>
+		<config>
+			<archive name="qt5_fs.tar" />
+			<policy label="" root="/" />
+		</config>
+	</start>
+	<start name="samegame">
+		<resource name="RAM" quantum="128M"/>
+	</start>
+
+</config>
+</subsystem>
+
+<subsystem name="lighttpd" help="Genode.org website">
+	<resource name="RAM" quantum="32M" />
+	<binary name="init" />
+		<config>
+			<parent-provides>
+				<service name="ROM"/>
+				<service name="RAM"/>
+				<service name="CAP"/>
+				<service name="PD"/>
+				<service name="RM"/>
+				<service name="CPU"/>
+				<service name="LOG"/>
+				<service name="SIGNAL"/>
+				<service name="Nic" />
+				<service name="Timer" />
+			</parent-provides>
+			<default-route>
+				<any-service> <parent/> <any-child/> </any-service>
+			</default-route>
+			<start name="tar_fs">
+				<resource name="RAM" quantum="10M"/>
+				<provides><service name="File_system"/></provides>
+				<config>
+					<archive name="genode_org.tar" />
+					<policy label="lighttpd" root="/" />
+				</config>
+			</start>
+			<start name="lighttpd">
+				<resource name="RAM" quantum="1G" />
+				<config>
+					<libc ip_addr="10.0.2.55" netmask="255.255.255.0" gateway="10.0.2.1"/>
+					<arg value="lighttpd" />
+					<arg value="-f" />
+					<arg value="/etc/lighttpd/lighttpd.conf" />
+					<arg value="-D" />
+				</config>
+			</start>
+		</config>
+</subsystem>
+
+
+<subsystem name="config" help="Configure Genode via Noux">
+	<resource name="RAM" quantum="128M" />
+	<binary name="init" />
+<config>
+	<parent-provides>
+		<service name="ROM"/>
+		<service name="RAM"/>
+		<service name="CAP"/>
+		<service name="PD"/>
+		<service name="RM"/>
+		<service name="CPU"/>
+		<service name="LOG"/>
+		<service name="SIGNAL"/>
+		<service name="Nitpicker"/>
+		<service name="Timer"/>
+		<service name="File_system"/>
+	</parent-provides>
+
+	<default-route>
+		<any-service> <parent/> <any-child/> </any-service>
+	</default-route>
+
+	<start name="liquid_fb">
+		<resource name="RAM" quantum="8M"/>
+		<provides>
+			<service name="Input"/>
+			<service name="Framebuffer"/>
+		</provides>
+		<config xpos="300" ypos="100" width="600" height="500" animate="off"/>
+	</start>
+
+	<start name="terminal">
+		<resource name="RAM" quantum="2M"/>
+		<provides><service name="Terminal"/></provides>
+		<config>
+			<keyboard layout="de"/>
+			<font size="16" />
+		</config>
+	</start>
+
+	<start name="noux">
+		<resource name="RAM" quantum="20M" />
+		<config>
+			<fstab>
+				<tar name="coreutils.tar" />
+				<tar name="vim.tar" />
+				<tar name="bash.tar" />
+				<dir name="config">  <fs label="config" /> </dir>
+				<dir name="shared">  <fs label="shared" /> </dir>
+			</fstab>
+			<start name="/bin/bash">
+				<env name="TERM" value="linux" />
+			</start>
+		</config>
+	</start>
+</config>
+</subsystem>
+
+
+<!-- trace FS -->
+<subsystem name="trace_fs" help="Trace file system">
+	<resource name="RAM" quantum="160M" />
+	<binary name="init" />
+<config>
+	<parent-provides>
+		<service name="ROM"/>
+		<service name="RAM"/>
+		<service name="CAP"/>
+		<service name="PD"/>
+		<service name="RM"/>
+		<service name="CPU"/>
+		<service name="LOG"/>
+		<service name="SIGNAL"/>
+		<service name="TRACE"/>
+		<service name="Nitpicker"/>
+		<service name="Timer"/>
+	</parent-provides>
+
+	<default-route>
+		<any-service> <parent/> <any-child/> </any-service>
+	</default-route>
+
+	<start name="liquid_fb">
+		<resource name="RAM" quantum="8M"/>
+		<provides>
+			<service name="Input"/>
+			<service name="Framebuffer"/>
+		</provides>
+		<config xpos="300" ypos="100" width="600" height="500" animate="off"/>
+	</start>
+
+	<start name="terminal">
+		<resource name="RAM" quantum="2M"/>
+		<provides><service name="Terminal"/></provides>
+		<config>
+			<keyboard layout="de"/>
+			<font size="16" />
+		</config>
+	</start>
+	<start name="trace_fs">
+		<resource name="RAM" quantum="64M"/>
+		<provides><service name="File_system"/></provides>
+		<config>
+			<policy label="noux -> trace"  root="/"  writeable="no" />
+		</config>
+	</start>
+	<start name="ram_fs">
+		<resource name="RAM" quantum="32M"/>
+		<provides><service name="File_system"/></provides>
+		<config>
+			<content>
+				<dir name="home">
+					<inline name=".bash_profile">
+					</inline>
+				</dir>
+				<dir name="tmp">
+					<dir name="policies">
+						<rom name="rpc_name" />
+					</dir>
+				</dir>
+			</content>
+			<!-- constrain sessions according to their labels -->
+			<policy label="noux -> root" root="/" />
+			<policy label="noux -> home" root="/home" writeable="yes" />
+			<policy label="noux -> tmp"  root="/tmp"  writeable="yes" />
+		</config>
+	</start>
+	<start name="noux">
+		<resource name="RAM" quantum="64M" />
+		<config>
+			<fstab>
+				<tar name="bash.tar" />
+				<tar name="coreutils.tar" />
+				<tar name="grep.tar" />
+				<tar name="vim.tar" />
+				<dir name="home"> <fs label="home" /> </dir>
+				<dir name="ram"> <fs label="root" /> </dir>
+				<dir name="tmp"> <fs label="tmp" /> </dir>
+				<dir name="trace"> <fs label="trace" /> </dir>
+
+				<dir name="dev">
+					<null /> <zero />
+				</dir>
+			</fstab>
+			<start name="/bin/bash">
+				<env name="TERM" value="linux" />
+				<env name="HOME" value="/home" />
+				<arg value="--login" />
+			</start>
+		</config>
+		<route>
+			<service name="File_system">
+				<if-arg key="label" value="home"/> <child name="ram_fs" /> </service>
+			<service name="File_system">
+				<if-arg key="label" value="root"/> <child name="ram_fs" />
+			</service>
+			<service name="File_system">
+				<if-arg key="label" value="tmp"/> <child name="ram_fs" />
+			</service>
+			<service name="File_system">
+				<if-arg key="label" value="trace"/> <child name="trace_fs"/>
+			</service>
+			<any-service> <parent /> <any-child /> </any-service>
+		</route>
+	</start>
+</config>
+</subsystem>
+
+
+<!-- Seoul -->
+
+<subsystem name="tinycore" help="TinyCore Linux via Seoul VMM">
+	<resource name="RAM" quantum="768M" />
+	<binary name="init" />
+<config>
+	<parent-provides>
+		<service name="ROM"/>
+		<service name="RAM"/>
+		<service name="CAP"/>
+		<service name="PD"/>
+		<service name="RM"/>
+		<service name="CPU"/>
+		<service name="LOG"/>
+		<service name="SIGNAL"/>
+		<service name="Timer"/>
+		<service name="Nitpicker"/>
+		<service name="Nic"/>
+		<service name="Rtc"/>
+	</parent-provides>
+	<default-route>
+		<any-service> <parent/> </any-service>
+	</default-route>
+
+	<start name="vancouver_fb">
+		<binary name="liquid_fb"/>
+		<resource name="RAM" quantum="12M"/>
+		<provides>
+			<service name="Framebuffer"/>
+			<service name="Input"/>
+		</provides>
+		<config animate="off" xpos="140" ypos="10" width="800" height="600"
+		        title="Seoul VMM" />
+	</start>
+
+	<start name="vancouver">
+		<resource name="RAM" quantum="512M"/>
+		<route>
+			<service name="Input"><child name="vancouver_fb"/></service>
+			<service name="Framebuffer"><child name="vancouver_fb"/></service>
+			<any-service><parent/></any-service>
+		</route>
+		<config>
+			<machine>
+				<mem start="0x0" end="0x9a000"/>
+				<mem start="0x100000" end="0xfffff000"/>
+				<!--<ioio/>-->
+				<nullio io_base="0x80" />
+				<pic io_base="0x20" elcr_base="0x4d0"/>
+				<pic io_base="0xa0" irq="2" elcr_base="0x4d1"/>
+				<pit io_base="0x40" irq="0"/>
+				<scp io_port_a="0x92" io_port_b="0x61"/>
+				<kbc io_base="0x60" irq_kbd="1" irq_aux="12"/>
+				<keyb ps2_port="0" host_keyboard="0x10000"/>
+				<mouse ps2_port="1" host_mouse="0x10001"/>
+				<rtc io_base="0x70" irq="8"/>
+				<serial io_base="0x3f8" irq="0x4" host_serial="0x4711"/>
+				<hostsink host_dev="0x4712" buffer="80"/>
+				<vga io_base="0x03c0" fb_size="4096" readonly="1"/>
+
+				<!--<vbios_disk/>-->
+				<vbios_keyboard/>
+				<vbios_mem/>
+				<vbios_time/>
+				<vbios_reset/>
+				<vbios_multiboot/>
+				<msi/>
+				<ioapic/>
+				<pcihostbridge bus_num="0" bus_count="0x10" io_base="0xcf8"
+				               mem_base="0xe0000000"/>
+				<pmtimer io_port="0x8000"/>
+				<vcpu/> <halifax/> <vbios/> <lapic/>
+				<intel82576vf/>
+			</machine>
+			<multiboot>
+				<rom name="munich"/>
+				<rom name="bzImage-3.1"
+				     cmdline="root=/dev/ram0 earlyprintk=ttyS0 vga=0x314"/>
+				<rom name="tc-browser.gz"/>
+			</multiboot>
+		</config>
+	</start>
+</config>
+</subsystem>
+
+<!-- Win7 -->
+
+<subsystem name="win7" help="Windows 7 via VirtualBox">
+	<resource name="RAM" quantum="1400M" />
+	<binary name="init" />
+<config>
+	<parent-provides>
+		<service name="ROM"/>
+		<service name="RAM"/>
+		<service name="CAP"/>
+		<service name="PD"/>
+		<service name="RM"/>
+		<service name="CPU"/>
+		<service name="LOG"/>
+		<service name="SIGNAL"/>
+		<service name="Timer"/>
+		<service name="Nitpicker"/>
+		<service name="File_system"/>
+	</parent-provides>
+	<default-route>
+		<any-service> <parent/> </any-service>
+	</default-route>
+
+	<start name="fb">
+		<binary name="liquid_fb"/>
+		<resource name="RAM" quantum="12M"/>
+		<provides>
+			<service name="Framebuffer"/>
+			<service name="Input"/>
+		</provides>
+		<config animate="off" xpos="140" ypos="10" width="800" height="600"
+		        title="VirtualBox (Windows 7)" />
+	</start>
+
+	<start name="ram_fs">
+		<resource name="RAM" quantum="384M"/>
+		<provides><service name="File_system"/></provides>
+		<config>
+			<content>
+				<dir name="ram">
+					<rom name="win7_overlay.vdi" as="overlay.vdi" />
+				</dir>
+			</content>
+			<policy label="" root="/" writeable="yes" />
+		</config>
+	</start>
+
+	<start name="vbox">
+		<binary name="virtualbox" />
+		<resource name="RAM" quantum="2G"/>
+		<config>
+			<arg value="virtualbox"/>
+			<arg value="-m"/> <arg value="768"/>
+			<arg value="-boot"/> <arg value="c"/>
+			<arg value="-hda"/>  <arg value="win7.vdi"/>
+			<arg value="-ioapic"/>
+		</config>
+		<route>
+			<service name="File_system">
+				<if-arg key="label" value="ram" /> <child name="ram_fs"/>
+			</service>
+			<service name="Framebuffer"> <child name="fb"/>   </service>
+			<service name="Input">       <child name="fb"/>   </service>
+			<any-service> <parent/> <any-child /> </any-service>
+		</route>
+	</start>
+
+</config>
+</subsystem>
+
+
+
+<!-- HelenOS -->
+
+<subsystem name="helenos" help="HelenOS via VirtualBox">
+	<resource name="RAM" quantum="420M" />
+	<binary name="init" />
+<config>
+	<parent-provides>
+		<service name="ROM"/>
+		<service name="RAM"/>
+		<service name="CAP"/>
+		<service name="PD"/>
+		<service name="RM"/>
+		<service name="CPU"/>
+		<service name="LOG"/>
+		<service name="SIGNAL"/>
+		<service name="Timer"/>
+		<service name="Nitpicker"/>
+		<service name="File_system"/>
+	</parent-provides>
+	<default-route>
+		<any-service> <parent/> </any-service>
+	</default-route>
+
+	<start name="fb">
+		<binary name="liquid_fb"/>
+		<resource name="RAM" quantum="12M"/>
+		<provides>
+			<service name="Framebuffer"/>
+			<service name="Input"/>
+		</provides>
+		<config animate="off" xpos="140" ypos="10" width="800" height="600"
+		        title="VirtualBox (HelenOS)" />
+	</start>
+
+	<start name="vbox">
+		<binary name="virtualbox" />
+		<resource name="RAM" quantum="2G"/>
+		<config>
+			<arg value="virtualbox"/>
+			<arg value="-m"/> <arg value="256"/>
+			<arg value="-boot"/> <arg value="d"/>
+			<arg value="-cdrom"/>  <arg value="HelenOS-0.5.0-ia32.iso"/>
+			<arg value="-ioapic"/>
+		</config>
+		<route>
+			<service name="Framebuffer"> <child name="fb"/>   </service>
+			<service name="Input">       <child name="fb"/>   </service>
+			<any-service> <parent/> <any-child /> </any-service>
+		</route>
+	</start>
+
+</config>
+</subsystem>
+
+		</config>
+	</start>
+</config>
+}
+
+install_config $config
+
+
+build_boot_image $boot_modules
+
