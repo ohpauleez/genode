@@ -429,8 +429,8 @@ Platform::Platform() :
 			printf("detected physical memory: 0x%16llx - size: 0x%llx\n",
 			        mem_desc->addr, mem_desc->size);
 
-		/* skip regions above 4G on 32 bit, no op on 64 bit */
-		if (mem_desc->addr > ~0UL) continue;
+		/* skip regions above 4G */
+		if (mem_desc->addr > ~0U) continue;
 
 		addr_t base = round_page(mem_desc->addr);
 		size_t size;
