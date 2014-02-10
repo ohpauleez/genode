@@ -146,6 +146,10 @@ class Framebuffer_window : public Scout::Window
 		 */
 		void content_geometry(int x, int y, int w, int h)
 		{
+			if (_config_decoration) {
+				x -= 1;    /* border */
+				y -= _TH;  /* title bar */
+			}
 			Window::vpos(x, y);
 			format(Scout::Area(w + 2, h + 1 + _TH));
 		}
