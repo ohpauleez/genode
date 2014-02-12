@@ -27,6 +27,13 @@ SRC_CC += libc_terminal/plugin.cc
 SRC_CC += libc_fs/plugin.cc
 SRC_CC += libc/pread_pwrite.cc
 
+# Another copy of the libc_fs plugin, for accessing a ram file system
+SRC_CC += ram_fs_plugin.cc
+$(SRC_CC:.cc=.o): ram_fs_plugin.cc
+ram_fs_plugin.cc: libc_fs/plugin.cc
+	$(VERBOSE)cp -f $< $@
+CC_OPT_ram_fs_plugin = -DGENODE_LIBC_RAM_FS
+
 # Genode lock pipe plugin (needed by VirtualBox "HostSerial" driver)
 SRC_CC += libc_lock_pipe/plugin.cc
 
