@@ -1,11 +1,9 @@
 #
 # Build
 #
-
-
 set build_components {
-        core init
-	drivers/timer 
+	core init
+	drivers/timer
 	drivers/audio_out
 	drivers/framebuffer drivers/pci drivers/input
 	server/tar_fs
@@ -84,7 +82,7 @@ append_if [have_spec ps2] config {
 
 append config {
         <start name="audio_out_drv">
-	       <resource name="RAM" quantum="6M"/>}
+			<resource name="RAM" quantum="6M"/>}
 append_if [have_spec acpi] config {
 		<route>
 			<service name="IRQ"><child name="acpi" /></service>
@@ -101,9 +99,9 @@ append config {
 	</start>
 
 	<start name="tar_fs">
-	       <resource name="RAM" quantum="4M"/>
-	       <provides> <service name="File_system"/></provides>
-	       <config>
+		<resource name="RAM" quantum="4M"/>
+		<provides> <service name="File_system"/></provides>
+		<config>
 			<archive name="maelstrom.tar"/>
 			<policy label="" root="/"/>
 		</config>
@@ -118,16 +116,16 @@ install_config $config
 #
 # Boot modules
 #
-		
+
 # generic modules
 set boot_modules {
-    	core init timer audio_out_drv 
+	core init timer audio_out_drv
 	tar_fs
 	ld.lib.so
-	libc.lib.so libc_fs.lib.so libc_log.lib.so	
+	libc.lib.so libc_fs.lib.so libc_log.lib.so
 	libm.lib.so
 	lwip.lib.so
-	stdcxx.lib.so 
+	stdcxx.lib.so
 	pthread.lib.so
 	stdcxx.lib.so
 	sdl.lib.so sdl_net.lib.so

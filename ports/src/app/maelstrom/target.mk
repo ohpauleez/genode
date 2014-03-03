@@ -1,6 +1,6 @@
 TARGET = maelstrom
 LIBS   = libc libc_log libc_fs libc_lwip_nic_dhcp \
-		stdcxx sdl sdl_mixer sdl_net libm
+         stdcxx sdl sdl_mixer sdl_net libm
 
 include $(REP_DIR)/ports/maelstrom.inc
 MAELSTROM_DIR = $(REP_DIR)/contrib/$(MAELSTROM)
