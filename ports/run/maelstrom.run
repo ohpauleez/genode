@@ -125,7 +125,6 @@ set boot_modules {
 	libc.lib.so libc_fs.lib.so libc_log.lib.so
 	libm.lib.so
 	lwip.lib.so
-	stdcxx.lib.so
 	pthread.lib.so
 	stdcxx.lib.so
 	sdl.lib.so sdl_net.lib.so
