@@ -57,13 +57,23 @@ append_if [have_spec acpi] config {
 		</provides>
 	</start>}
 
+append_if [have_spec pci] config {
+	<start name="pci_drv">
+		<resource name="RAM" quantum="1M"/>
+		<provides><service name="PCI"/></provides>
+	</start>}
+
 append_if [have_spec vesa] config {
 	<start name="fb_drv">
 		<resource name="RAM" quantum="4M"/>
 		<provides><service name="Framebuffer"/></provides>
 		<config buffered="yes"> </config>
-		<route>
-			<service name="PCI"><child name="acpi" /></service>
+		<route>}
+append_if [have_spec acpi] config {
+			<service name="PCI"><child name="acpi" /></service>}
+append_if [expr ![have_spec acpi] && [have_spec pci]] config {
+			<service name="PCI"><child name="pci_drv" /></service>}
+append_if [have_spec vesa] config {
 			<any-service> <parent /> <any-child /></any-service>
 		</route>
 	</start>}
