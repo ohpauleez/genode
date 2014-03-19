@@ -79,7 +79,27 @@ proc add_prefix {prefix list} {
 }
 
 
-# write default vimrc file
+#
+# Create launchpad configuration
+#
+set launchpad_config_fd [open "bin/launchpad.config" w]
+puts $launchpad_config_fd {<config>
+	<launcher name="testnit"   ram_quota="768K" />
+	<launcher name="scout"     ram_quota="41M" />
+	<launcher name="launchpad" ram_quota="6M">
+		<configfile name="launchpad.config" />
+	</launcher>
+	<launcher name="nitlog"    ram_quota="1M" />
+	<launcher name="liquid_fb" ram_quota="7M" />
+		<config resize_handle="on" />
+	<launcher name="nitpicker" ram_quota="1M" />
+</config>}
+close $launchpad_config_fd
+
+
+#
+# Write default vimrc file
+#
 set vimrc_fd [open "bin/vim/share/vim/vimrc" w]
 puts $vimrc_fd {
 set noloadplugins
@@ -99,6 +119,7 @@ exec sh -c "find [add_prefix "bin/" $noux_pkgs] -type f | (xargs [cross_dev_pref
 exec ln -sf bash bin/bash/bin/sh
 
 foreach pkg $noux_pkgs { exec tar cfv  bin/$pkg.tar -h -C bin/$pkg . }
+
 
 #
 # Archive binaries and source codes needed for GDB monitor test
@@ -401,6 +422,7 @@ lappend misc "qt5_fs.tar"
 lappend misc "gdb_command_config"
 lappend misc "rpc_name"
 lappend misc "win7_overlay.vdi"
+lappend misc "launchpad.config"
 
 if {![file exists bin/win7_overlay]} {
 	catch {
@@ -1517,7 +1539,7 @@ echo "test succeeded"
 			<service name="Framebuffer"/>
 			<service name="Input"/>
 		</provides>
-		<config animate="off" xpos="140" ypos="10" width="800" height="600"
+		<config animate="off" xpos="140" ypos="30" width="800" height="600"
 		        title="VirtualBox (Windows 7)" />
 	</start>
 
@@ -1543,6 +1565,7 @@ echo "test succeeded"
 			<arg value="-boot"/> <arg value="c"/>
 			<arg value="-hda"/>  <arg value="win7.vdi"/>
 			<arg value="-ioapic"/>
+			<image type="vdi" file="win7.vdi" overlay="yes" />
 		</config>
 		<route>
 			<service name="File_system">
@@ -1619,7 +1642,6 @@ echo "test succeeded"
 }
 
 install_config $config
-
 
 build_boot_image $boot_modules
 
