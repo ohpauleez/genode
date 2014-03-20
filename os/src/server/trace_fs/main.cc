@@ -925,7 +925,7 @@ class File_system::Root : public Root_component<Session_component>
 
 			/* default settings */
 			unsigned interval                        = 1000; /* 1 sec */
-			unsigned subject_limit                   = 128;
+			unsigned subject_limit                   = 128*4;
 
 			Genode::Number_of_bytes trace_quota      =  32 * (1 << 20); /*  32 MiB */
 			Genode::Number_of_bytes trace_meta_quota = 256 * (1 << 10); /* 256 KiB */
