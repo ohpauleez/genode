@@ -1,13 +1,14 @@
 /*
  * \brief  USB driver main program
  * \author Norman Feske
- * \author Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+ * \author Sebastian Sumpf  <sebastian.sumpf@genode-labs.com>
+ * \author Christian Menard <christian.menard@ksyslabs.org>
  * \date   2012-01-29
  */
 
 /*
- * Copyright (C) 2014 Ksys Labs LLC
- * Copyright (C) 2012-2013 Genode Labs GmbH
+ * Copyright (C) 2012-2014 Genode Labs GmbH
+ * Copyright (C) 2014      Ksys Labs LLC
  *
  * This file is part of the Genode OS framework, which is distributed
  * under the terms of the GNU General Public License version 2.
