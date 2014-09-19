@@ -1188,7 +1188,7 @@ struct Nitpicker::Main
 		handle_config(0);
 
 		timer.sigh(input_dispatcher);
-		timer.trigger_periodic(10*1000);
+		timer.trigger_periodic(20*1000);
 
 		framebuffer.mode_sigh(fb_mode_dispatcher);
 
