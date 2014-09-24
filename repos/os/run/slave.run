@@ -1,0 +1,35 @@
+build "core init test/slave"
+
+create_boot_directory
+
+install_config {
+	<config>
+		<parent-provides>
+			<service name="ROM"/>
+			<service name="RAM"/>
+			<service name="CPU"/>
+			<service name="RM"/>
+			<service name="CAP"/>
+			<service name="PD"/>
+			<service name="IRQ"/>
+			<service name="IO_PORT"/>
+			<service name="IO_MEM"/>
+			<service name="SIGNAL"/>
+			<service name="LOG"/>
+		</parent-provides>
+		<default-route>
+			<any-service> <parent/> <any-child/> </any-service>
+		</default-route>
+		<start name="test-slave_master">
+			<resource name="RAM" quantum="32M"/>
+		</start>
+	</config>
+}
+
+build_boot_image "core init timer test-slave_master test-slave_child"
+
+append qemu_args "-nographic -m 64"
+
+run_genode_until {a message printed by child 2.*\n} 100
+
+puts "Test succeeded"
