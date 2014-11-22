@@ -328,6 +328,23 @@ int main(int, char **)
 
 	int key_cnt = 0;
 
+	{
+		nitpicker.enqueue<Command::To_front>(view_handle);
+		nitpicker.execute();
+
+		unsigned const native_width  = nitpicker_mode.width(),
+		               native_height = nitpicker_mode.height();
+		unsigned const pad_x = native_width == 1600 ? 4 : 0;
+		unsigned const x = (native_width  - view_width)  / 2,
+		               y = (native_height - view_height) / 2;
+
+		Nitpicker::Rect rect(Nitpicker::Point(x + pad_x, y),
+		                     Nitpicker::Area(view_width - 2*pad_x,
+		                                     view_height));
+		nitpicker.enqueue<Command::Geometry>(view_handle, rect);
+		nitpicker.execute();
+	}
+
 	/*
 	 * Input event loop
 	 */
