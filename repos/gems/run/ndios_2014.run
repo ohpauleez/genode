@@ -1,3 +1,6 @@
+
+source ${genode_dir}/repos/libports/run/qt5_common.inc
+
 set build_components {
 	core init drivers/timer
 	noux/minimal
@@ -26,6 +29,7 @@ set build_components {
 	server/report_rom
 	server/nit_fader
 	server/wm
+	server/tar_rom
 	test/libports/ncurses
 	test/nitpicker
 	app/mupdf
@@ -145,10 +149,18 @@ foreach file $files_from_genode_org {
 	download_if_needed http://genode.org/files/seoul/$file bin/$file }
 
 #
+# Create Qt tar archive
+#
+
+create_qt5_fs_tar_archive "arora" "gui"
+
+lappend misc "qt5_fs_arora.tar"
+
+#
 # Generate tar archive with plugin configuration
 #
 exec tar cf bin/nitpicker_plugin.tar -C [genode_dir]/repos/ports/src/app/arora/demo/nitpicker_plugin config.plugin
-lappend misc nitpicker_plugin.tar
+lappend misc "nitpicker_plugin.tar"
 
 # copy backdrop PNG images to bin directory
 foreach file { genode_logo.png grid.png } {
@@ -157,6 +169,7 @@ foreach file { genode_logo.png grid.png } {
 # server
 lappend binaries "nitpicker"
 lappend binaries "wm"
+lappend binaries "tar_rom"
 
 # apps
 lappend binaries "scout"
@@ -174,9 +187,9 @@ lappend binaries "decorator"
 lappend binaries "arora"
 
 # linux
-lappend misc "bzImage-3.1"
-lappend misc "tc-browser.gz"
-lappend misc "munich"
+#lappend misc "bzImage-3.1"
+#lappend misc "tc-browser.gz"
+#lappend misc "munich"
 
 lappend misc "bash.tar"
 lappend misc "coreutils.tar"
@@ -404,6 +417,8 @@ set config {
 			<domain name=""           layer="3" ypos="18" height="-18" />
 			<domain name="noux"       layer="3" ypos="18" height="-18" color="#ff0000" />
 			<domain name="noux wm"    layer="3" ypos="18" height="-18" xray="opaque" color="#ff0000" />
+			<domain name="arora"      layer="3" ypos="18" height="-18" color="#ffff00" />
+			<domain name="arora wm"   layer="3" ypos="18" height="-18" xray="opaque" color="#ffff00" />
 			<domain name="log"        layer="3" ypos="18" height="-18" color="#2040ff" />
 			<domain name="background" layer="4" xray="no" />
 
@@ -412,6 +427,8 @@ set config {
 			<policy label="launcher -> menu" domain="panel"/>
 			<policy label="launcher -> noux" domain="noux"/>
 			<policy label="launcher -> noux -> wm -> decorator" domain="noux wm"/>
+			<policy label="launcher -> arora" domain="arora"/>
+			<policy label="launcher -> arora -> wm -> decorator" domain="arora wm"/>
 			<policy label="nit_fb_log"       domain="log"/>
 			<policy label="backdrop"         domain="background"/>
 			<policy label=""                 domain=""/>
@@ -515,119 +532,169 @@ set config {
 	<start name="launcher">
 		<resource name="RAM" quantum="2G" />
 		<config visibility="xray">
-			<subsystem name="slides" title="Slides">
-				<resource name="RAM" quantum="110M" />
-				<binary name="mupdf" />
-				<config>
-					<pdf name="slides.pdf"/>
-					<libc stdout="/dev/log" stderr="/dev/log">
-						<vfs>
-							<rom name="slides.pdf" />
-							<dir name="dev"> <log/> </dir>
-						</vfs>
-					</libc>
-				</config>
-			</subsystem>
-			<subsystem name="noux" title="Noux">
-				<resource name="RAM" quantum="128M" />
-				<binary name="init" />
 
 
-<config>
-	<parent-provides>
-		<service name="ROM"/>
-		<service name="LOG"/>
-		<service name="CAP"/>
-		<service name="RAM"/>
-		<service name="RM"/>
-		<service name="CPU"/>
-		<service name="PD"/>
-		<service name="SIGNAL"/>
-		<service name="Timer"/>
-		<service name="Nitpicker"/>
-		<service name="File_system"/>
-	</parent-provides>
-	<default-route>
-		<any-service> <any-child/> <parent/> </any-service>
-	</default-route>
-	<start name="wm" >
-		<resource name="RAM" quantum="32M"/>
-		<provides><service name="Nitpicker"/></provides>
-		<route>
-			<any-service> <parent/> </any-service>
-		</route>
-	</start>
-	<start name="nit_fb">
-		<resource name="RAM" quantum="4M"/>
-		<config xpos="300" ypos="160" width="640" height="480" />
-		<provides>
-			<service name="Input"/>
-			<service name="Framebuffer"/>
-		</provides>
-	</start>
-	<start name="terminal">
-		<resource name="RAM" quantum="2M"/>
-		<provides><service name="Terminal"/></provides>
-	</start>
-	<start name="ram_fs">
-		<resource name="RAM" quantum="30M"/>
-		<provides><service name="File_system"/></provides>
-		<config>
-			<content>
-				<dir name="home">
-				</dir>
-				<dir name="tmp">
-				</dir>
-			</content>
+<subsystem name="slides" title="Slides">
+	<resource name="RAM" quantum="110M" />
+	<binary name="mupdf" />
+	<config>
+		<pdf name="slides.pdf"/>
+		<libc stdout="/dev/log" stderr="/dev/log">
+			<vfs>
+				<rom name="slides.pdf" />
+				<dir name="dev"> <log/> </dir>
+			</vfs>
+		</libc>
+	</config>
+</subsystem>
 
-			<!-- constrain sessions according to their labels -->
-			<policy label="noux -> root" root="/" />
-			<policy label="noux -> home" root="/home" writeable="yes" />
-			<policy label="noux -> tmp"  root="/tmp"  writeable="yes" />
-		</config>
-	</start>
-	<start name="noux">
-		<resource name="RAM" quantum="50M" />
-		<route>
-			<service name="File_system">
-				<if-arg key="label" value="config"/> <parent/> </service>
+
+<subsystem name="noux" title="Noux">
+	<resource name="RAM" quantum="128M" />
+	<binary name="init" />
+	<config>
+		<parent-provides>
+			<service name="ROM"/>
+			<service name="LOG"/>
+			<service name="CAP"/>
+			<service name="RAM"/>
+			<service name="RM"/>
+			<service name="CPU"/>
+			<service name="PD"/>
+			<service name="SIGNAL"/>
+			<service name="Timer"/>
+			<service name="Nitpicker"/>
+			<service name="File_system"/>
+		</parent-provides>
+		<default-route>
 			<any-service> <any-child/> <parent/> </any-service>
-		</route>
-		<config>
-			<fstab>
-				<tar name="bash.tar" />
-				<tar name="coreutils.tar" />
-				<tar name="vim.tar" />
+		</default-route>
+		<start name="wm" >
+			<resource name="RAM" quantum="32M"/>
+			<provides><service name="Nitpicker"/></provides>
+			<route>
+				<any-service> <parent/> </any-service>
+			</route>
+		</start>
+		<start name="nit_fb">
+			<resource name="RAM" quantum="4M"/>
+			<config xpos="300" ypos="160" width="640" height="480" />
+			<provides>
+				<service name="Input"/>
+				<service name="Framebuffer"/>
+			</provides>
+		</start>
+		<start name="terminal">
+			<resource name="RAM" quantum="2M"/>
+			<provides><service name="Terminal"/></provides>
+		</start>
+		<start name="ram_fs">
+			<resource name="RAM" quantum="30M"/>
+			<provides><service name="File_system"/></provides>
+			<config>
+				<content>
+					<dir name="home">
+					</dir>
+					<dir name="tmp">
+					</dir>
+				</content>
 
-				<dir name="dev">
-					<null />
-				</dir>
+				<!-- constrain sessions according to their labels -->
+				<policy label="noux -> root" root="/" />
+				<policy label="noux -> home" root="/home" writeable="yes" />
+				<policy label="noux -> tmp"  root="/tmp"  writeable="yes" />
+			</config>
+		</start>
+		<start name="noux">
+			<resource name="RAM" quantum="50M" />
+			<route>
+				<service name="File_system">
+					<if-arg key="label" value="config"/> <parent/> </service>
+				<any-service> <any-child/> <parent/> </any-service>
+			</route>
+			<config>
+				<fstab>
+					<tar name="bash.tar" />
+					<tar name="coreutils.tar" />
+					<tar name="vim.tar" />
 
-				<dir name="home">
-					<fs label="home" />
-				</dir>
+					<dir name="dev">
+						<null />
+					</dir>
 
-				<dir name="config">
-					<fs label="config" />
-				</dir>
+					<dir name="home">
+						<fs label="home" />
+					</dir>
 
-				<dir name="tmp">
-					<fs label="tmp" />
-				</dir>
+					<dir name="config">
+						<fs label="config" />
+					</dir>
 
-			</fstab>
-			<start name="/bin/bash">
-				<env name="TERM" value="linux" />
-				<env name="HOME" value="/home" />
-				<env name="PATH" value="/bin" />
-				<arg value="--login" />
-			</start>
-		</config>
-	</start>
-</config>
+					<dir name="tmp">
+						<fs label="tmp" />
+					</dir>
+
+				</fstab>
+				<start name="/bin/bash">
+					<env name="TERM" value="linux" />
+					<env name="HOME" value="/home" />
+					<env name="PATH" value="/bin" />
+					<arg value="--login" />
+				</start>
+			</config>
+		</start>
+	</config>
+</subsystem>
 
 
-			</subsystem>
+<subsystem name="arora" title="Web Browser">
+	<resource name="RAM" quantum="256M" />
+	<binary name="init" />
+	<config>
+		<parent-provides>
+			<service name="ROM"/>
+			<service name="LOG"/>
+			<service name="CAP"/>
+			<service name="RAM"/>
+			<service name="RM"/>
+			<service name="CPU"/>
+			<service name="PD"/>
+			<service name="SIGNAL"/>
+			<service name="Timer"/>
+			<service name="Nitpicker"/>
+		</parent-provides>
+		<default-route>
+			<any-service> <any-child/> <parent/> </any-service>
+		</default-route>
+		<start name="wm" >
+			<resource name="RAM" quantum="32M"/>
+			<provides><service name="Nitpicker"/></provides>
+			<route>
+				<any-service> <parent/> </any-service>
+			</route>
+		</start>
+		<start name="loader">
+			<resource name="RAM" quantum="2M"/>
+			<provides><service name="Loader"/></provides>
+		</start>
+		<start name="arora">
+			<resource name="RAM" quantum="200M"/>
+			<config>
+				<libc stdout="/dev/log" stderr="/dev/log"
+				      ip_addr="10.0.2.56"
+				      netmask="255.255.255.0"
+				      gateway="10.0.2.1">
+					<vfs>
+						<dir name="dev"> <log/> </dir>
+						<tar name="qt5_fs_arora.tar"/>
+					</vfs>
+				</libc>
+			</config>
+		</start>
+	</config>
+</subsystem>
+
+
 			<subsystem name="testnit1" title="Nitpicker Test">
 				<resource name="RAM" quantum="2M" />
 				<binary name="testnit" />
@@ -673,6 +740,6 @@ install_config $config
 
 build_boot_image $boot_modules
 
-append qemu_args " -m 768 "
+append qemu_args " -m 1024 "
 
 run_genode_until forever
