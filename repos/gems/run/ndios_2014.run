@@ -1,0 +1,497 @@
+set build_components {
+	core init drivers/timer
+	noux/minimal
+	lib/libc_noux
+	drivers/framebuffer
+	drivers/pci
+	drivers/input
+	drivers/acpi
+	drivers/usb
+	drivers/nic
+	drivers/ahci
+	drivers/rtc
+	server/terminal
+	server/ram_fs
+	server/nic_bridge
+	server/nitpicker
+	server/fs_rom
+	server/nit_fb
+	server/terminal_log
+	server/input_merger
+	server/loader
+	server/rump_fs
+	server/liquid_framebuffer
+	server/tar_fs
+	server/terminal_crosslink
+	server/rom_prefetcher
+	server/part_blk
+	server/report_rom
+	test/libports/ncurses
+	test/nitpicker
+	app/mupdf
+	app/backdrop
+	app/launchpad
+	app/menu_view
+	app/scout
+	app/launcher
+	app/seoul
+	app/status_bar
+	app/pointer
+	virtualbox
+}
+
+#
+# Comment out this line to skip the long-taking build of Qt
+#
+#append build_components { app/arora }
+
+#
+# Build Noux packages only once
+#
+set noux_pkgs {bash coreutils vim }
+foreach pkg $noux_pkgs {
+	lappend_if [expr ![file exists bin/$pkg]] build_components noux-pkg/$pkg }
+
+build $build_components
+
+
+#########################
+## Assemble boot image ##
+#########################
+
+create_boot_directory
+
+
+##
+# Utility: Return list with prefix added to each element
+#
+proc add_prefix {prefix list} {
+	set result {}
+	foreach element $list { lappend result "$prefix$element" }
+	return $result
+}
+
+
+# write default vimrc file
+set vimrc_fd [open "bin/vim/share/vim/vimrc" w]
+puts $vimrc_fd {
+set noloadplugins
+set hls
+set nocompatible
+set laststatus=2
+set noswapfile
+set viminfo=
+set ts=2}
+close $vimrc_fd
+
+#
+# Archive Noux packages, stip binaries before archiving
+#
+exec sh -c "find [add_prefix "bin/" $noux_pkgs] -type f | (xargs [cross_dev_prefix]strip || true) 2>/dev/null"
+
+exec ln -sf bash bin/bash/bin/sh
+
+foreach pkg $noux_pkgs { exec tar cfv  bin/$pkg.tar -h -C bin/$pkg . }
+
+
+#
+# Boot modules
+#
+
+# generic modules
+set boot_modules {
+	core init timer ld.lib.so noux terminal ram_fs acpi_drv usb_drv
+	input_merger loader testnit nit_fb nic_drv rtc_drv
+	nitpicker fs_rom terminal_log backdrop ahci rump_fs report_rom
+	nic_bridge mupdf rom_prefetcher launcher pointer status_bar
+	sticks_blue.png genode_logo.png grid.png
+	part_blk libc.lib.so
+}
+
+# platform-specific modules
+lappend_if [have_spec linux]       boot_modules fb_sdl
+lappend_if [have_spec pci]         boot_modules pci_drv
+lappend_if [have_spec pci]         boot_modules pci_device_pd
+lappend_if [have_spec framebuffer] boot_modules fb_drv
+lappend_if [have_spec ps2]         boot_modules ps2_drv
+
+#
+# Sync binary supplements for backdrop and mupdf
+#
+#if {![file exists bin/slides.pdf]} {
+#	file copy -force /home/no/src/doc/vortraege/ndios_2014/slides.pdf bin/slides.pdf }
+
+##
+# Download file if it does not exist already
+#
+# \param dst  path of destination
+#
+proc download_if_needed {url dst} {
+
+	if {![file exists $dst]} {
+		puts "downloading '$dst' from '$url' ..."
+		catch { exec wget $url -O $dst }
+	}
+}
+
+#
+# Download binary supplements for seoul demo
+#
+set files_from_genode_org [list munich tc-browser.gz bzImage-3.1]
+foreach file $files_from_genode_org {
+	download_if_needed http://genode.org/files/seoul/$file bin/$file }
+
+#
+# Generate tar archive with plugin configuration
+#
+exec tar cf bin/nitpicker_plugin.tar -C [genode_dir]/repos/ports/src/app/arora/demo/nitpicker_plugin config.plugin
+lappend misc nitpicker_plugin.tar
+
+# copy backdrop PNG images to bin directory
+foreach file { genode_logo.png grid.png } {
+	file copy -force [genode_dir]/repos/gems/src/app/backdrop/$file bin/ }
+
+# server
+lappend binaries "nitpicker"
+lappend binaries "tar_fs"
+
+# apps
+lappend binaries "scout"
+lappend binaries "launchpad"
+lappend binaries "liquid_fb"
+lappend binaries "testnit"
+lappend binaries "launcher"
+lappend binaries "seoul"
+lappend binaries "menu_view"
+lappend binaries "virtualbox"
+
+# qt applications
+lappend binaries "arora"
+
+# linux
+lappend misc "bzImage-3.1"
+lappend misc "tc-browser.gz"
+lappend misc "munich"
+
+lappend misc "bash.tar"
+lappend misc "coreutils.tar"
+lappend misc "vim.tar"
+
+# slides
+lappend misc "slides.pdf"
+
+# determine shared libraries
+regsub -all {bin/} [glob bin/*.lib.so] "" shared_libraries
+
+#
+# Copy content to CD
+#
+
+#set data_provider "iso9660"
+set data_provider "grub"
+
+if {$data_provider == "iso9660"} {
+
+	# binaries
+	foreach i $binaries {
+		exec cp -L  bin/$i [run_dir]/$i
+		exec strip -d [run_dir]/$i
+	}
+
+	# also redundantly add the boot modules to simplify the config
+	foreach i $boot_modules {
+		catch {
+			exec cp -L bin/$i [run_dir]/$i
+			exec strip -d [run_dir]/$i
+		}
+	}
+
+	# shared libraries
+	foreach i $shared_libraries {
+		catch {
+			exec cp -L bin/$i [run_dir]/$i
+			exec strip -d [run_dir]/$i
+		}
+	}
+
+	# misc.
+	foreach i $misc {
+		exec cp -L bin/$i [run_dir]/$i
+	}
+}
+
+if {$data_provider == "grub"} {
+
+	# supply all data as ROM modules
+	append boot_modules " $binaries $shared_libraries $misc "
+}
+
+
+
+#######################################
+## Configuration of the init process ##
+#######################################
+
+set config {
+<config prio_levels="2">
+	<parent-provides>
+		<service name="ROM"/>
+		<service name="LOG"/>
+		<service name="CAP"/>
+		<service name="RAM"/>
+		<service name="RM"/>
+		<service name="CPU"/>
+		<service name="PD"/>
+		<service name="IRQ"/>
+		<service name="IO_PORT"/>
+		<service name="IO_MEM"/>
+		<service name="SIGNAL"/>
+		<service name="TRACE"/>
+	</parent-provides>
+	<default-route>
+		<service name="IRQ"> <child name="acpi" /> </service>
+		<any-service> <parent/> <any-child/> </any-service>
+	</default-route>
+	<start name="timer">
+		<resource name="RAM" quantum="1M"/>
+		<provides><service name="Timer"/></provides>
+		<route> <any-service> <parent/> </any-service> </route>
+	</start>
+	<start name="acpi">
+		<resource name="RAM" quantum="16M"/>
+		<binary name="acpi_drv"/>
+		<provides>
+			<service name="PCI"/>
+			<service name="IRQ" />
+		</provides>
+		<route>
+			<any-service> <parent/> <any-child /> </any-service>
+		</route>
+	</start>
+	<start name="fb_drv">
+		<resource name="RAM" quantum="5M"/>
+		<provides><service name="Framebuffer"/></provides>
+		<config buffered="yes" width="1024" height="768" />
+	</start>
+	<start name="usb_drv">
+		<resource name="RAM" quantum="7M"/>
+		<provides><service name="Input"/></provides>
+		<config uhci="yes" ehci="yes" xhci="yes">
+			<hid/>
+		</config>
+	</start>
+	<start name="ps2_drv">
+		<resource name="RAM" quantum="1M"/>
+		<provides><service name="Input"/></provides>
+	</start>
+	<start name="input_merger">
+		<resource name="RAM" quantum="1M" />
+		<provides>
+			<service name="Input" />
+		</provides>
+		<config>
+			<input label="ps2" />
+			<input label="usb_hid" />
+		</config>
+		<route>
+			<service name="Input">
+				<if-arg key="label" value="ps2" /> <child name="ps2_drv" />
+			</service>
+			<service name="Input">
+				<if-arg key="label" value="usb_hid" /> <child name="usb_drv" />
+			</service>
+			<any-service> <parent /> </any-service>
+		</route>
+	</start>
+<!--
+	<start name="nic_drv">
+		<resource name="RAM" quantum="2M"/>
+		<provides><service name="Nic"/></provides>
+	</start>
+	<start name="nic_bridge">
+		<resource name="RAM" quantum="4M"/>
+		<provides><service name="Nic"/></provides>
+		<config>
+			<policy label="cli_monitor -> lighttpd" ip_addr="10.0.2.55"/>
+			<policy label="cli_monitor -> arora_static" ip_addr="10.0.2.56"/>
+		</config>
+		<route>
+			<service name="Nic"> <child name="nic_drv"/> </service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+-->
+<!--
+	<start name="nitpicker">
+		<resource name="RAM" quantum="1M"/>
+		<provides><service name="Nitpicker"/></provides>
+		<route>
+			<service name="Framebuffer"> <child name="fb_drv"/> </service>
+			<service name="ROM">
+				<if-arg key="filename" value="nitpicker.config" />
+				<child name="config_rom"/>
+			</service>
+			<any-service> <child name="fb_drv" />
+			              <child name="d3m" />
+			              <parent/> <any-child/> </any-service>
+		</route>
+		<configfile name="nitpicker.config" />
+	</start>-->
+	<start name="report_rom">
+		<resource name="RAM" quantum="1M"/>
+		<provides> <service name="Report"/> <service name="ROM"/> </provides>
+		<config>
+			<rom>
+				<policy label="status_bar -> focus" report="nitpicker -> focus"/>
+			</rom>
+		</config>
+	</start>
+	<start name="nitpicker">
+		<resource name="RAM" quantum="1M"/>
+		<provides><service name="Nitpicker"/></provides>
+		<route>
+			<service name="Framebuffer"> <child name="fb_drv"/> </service>
+			<service name="Input"> <child name="input_merger"/> </service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+		<config>
+			<report focus="yes" />
+			<domain name="pointer" layer="1" xray="no" origin="pointer" />
+			<domain name="panel"   layer="2" xray="no" />
+			<domain name=""        layer="3" ypos="18" height="-18" />
+
+			<policy label="pointer"    domain="pointer"/>
+			<policy label="status_bar" domain="panel"/>
+			<policy label=""           domain=""/>
+
+			<global-key name="KEY_SCROLLLOCK" operation="xray" />
+			<global-key name="KEY_SYSRQ"      operation="kill" />
+			<global-key name="KEY_PRINT"      operation="kill" />
+			<global-key name="KEY_F11"        operation="kill" />
+			<global-key name="KEY_F12"        operation="xray" />
+		</config>
+	</start>
+	<start name="pointer">
+		<resource name="RAM" quantum="1M"/>
+	</start>
+	<start name="status_bar">
+		<resource name="RAM" quantum="1M"/>
+		<route>
+			<service name="ROM"> <child name="report_rom"/> </service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+	<start name="backdrop" priority="-1">
+		<resource name="RAM" quantum="4M"/>
+		<config>
+			<libc>
+				<vfs>
+					<rom name="sticks_blue.png"/>
+					<rom name="genode_logo.png"/>
+					<rom name="grid.png"/>
+				</vfs>
+			</libc>
+			<fill color="#224433" />
+			<image png="sticks_blue.png" scale="zoom" anchor="bottom_left"/>
+			<image png="grid.png"        tiled="yes" alpha="200" />
+			<image png="genode_logo.png" anchor="bottom_right" alpha="150"
+			                             xpos="-20" ypos="-20" />
+		</config>
+		<route>
+			<any-service> <child name="nitpicker"/> <parent/> <any-child/>
+			</any-service>
+		</route>
+	</start>
+	<start name="nit_fb_log_terminal">
+		<binary name="terminal"/>
+		<resource name="RAM" quantum="1M"/>
+		<provides><service name="Terminal"/></provides>
+		<route>
+			<any-service> <child name="nit_fb_log" />
+			              <child name="nit_fb_log" />
+			              <parent/> <any-child/> </any-service>
+		</route>
+		<config>
+			<font size="8"/>
+		</config>
+	</start>
+	<start name="terminal_log">
+		<binary name="terminal_log"/>
+		<resource name="RAM" quantum="1M"/>
+		<provides><service name="LOG"/></provides>
+		<route>
+			<any-service> <child name="nit_fb_log_terminal" />
+			              <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+<!--	<start name="config_rom">
+		<binary name="fs_rom" />
+		<resource name="RAM" quantum="10M"/>
+		<provides><service name="ROM"/></provides>
+		<route>
+			<service name="File_system"> <child name="config_fs" /> </service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+	</start>-->
+	<start name="nit_fb_log">
+		<binary name="nit_fb" />
+		<resource name="RAM" quantum="4M"/>
+		<provides>
+			<service name="Input"/>
+			<service name="Framebuffer"/>
+		</provides>
+		<config xpos="300" ypos="20" width="500" height="700" />
+		<route>
+<!--			<service name="ROM">
+				<if-arg key="filename" value="nit_fb_log.config" />
+				<child name="config_rom"/>
+			</service>-->
+			<any-service> <child name="nitpicker" />
+			              <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+	<start name="mupdf">
+		<resource name="RAM" quantum="110M"/>
+		<config>
+			<pdf name="slides.pdf"/>
+			<libc stdout="/dev/log" stderr="/dev/log">
+				<vfs>
+					<rom name="slides.pdf" />
+					<dir name="dev"> <log/> </dir>
+				</vfs>
+			</libc>
+		</config>
+		<route>
+			<service name="LOG"> <child name="terminal_log"/>  </service>
+			<any-service> <child name="nitpicker" />
+			              <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+	<start name="loader">
+		<resource name="RAM" quantum="2M"></resource>
+		<provides><service name="Loader"/></provides>
+		<route>
+			<service name="ROM">
+				<if-arg key="filename" value="hypervisor_info_page" />
+				<parent/>
+			</service>
+			<service name="LOG"> <child name="terminal_log"/> </service>
+<!--			<service name="ROM"> <child name="rom_provider"/> </service>-->
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+	<start name="rtc_drv">
+		<resource name="RAM" quantum="1M"/>
+		<provides><service name="Rtc"/></provides>
+	</start>
+</config>
+}
+
+install_config $config
+
+
+build_boot_image $boot_modules
+
+append qemu_args " -m 768 "
+
+run_genode_until forever
