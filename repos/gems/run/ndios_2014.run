@@ -21,12 +21,11 @@ set build_components {
 	server/loader
 	server/rump_fs
 	server/liquid_framebuffer
-	server/tar_fs
-	server/terminal_crosslink
 	server/rom_prefetcher
 	server/part_blk
 	server/report_rom
 	server/nit_fader
+	server/wm
 	test/libports/ncurses
 	test/nitpicker
 	app/mupdf
@@ -38,6 +37,8 @@ set build_components {
 	app/seoul
 	app/status_bar
 	app/pointer
+	app/floating_window_layouter
+	app/decorator
 	virtualbox
 }
 
@@ -155,7 +156,7 @@ foreach file { genode_logo.png grid.png } {
 
 # server
 lappend binaries "nitpicker"
-lappend binaries "tar_fs"
+lappend binaries "wm"
 
 # apps
 lappend binaries "scout"
@@ -166,6 +167,8 @@ lappend binaries "launcher"
 lappend binaries "seoul"
 lappend binaries "menu_view"
 lappend binaries "virtualbox"
+lappend binaries "floating_window_layouter"
+lappend binaries "decorator"
 
 # qt applications
 lappend binaries "arora"
@@ -339,6 +342,43 @@ set config {
 		</route>
 		<configfile name="nitpicker.config" />
 	</start>-->
+
+	<start name="config_fs">
+		<binary name="ram_fs" />
+		<resource name="RAM" quantum="10M"/>
+		<provides><service name="File_system"/></provides>
+		<config>
+			<policy label="config_rom" root="/" />
+			<policy label="launcher -> noux" root="/" writeable="yes" />
+			<content>
+				<inline name="backdrop.config">
+					<config>
+						<libc>
+							<vfs>
+								<rom name="sticks_blue.png"/>
+								<rom name="genode_logo.png"/>
+								<rom name="grid.png"/>
+							</vfs>
+						</libc>
+						<fill color="#224433" />
+						<image png="sticks_blue.png" scale="zoom" anchor="bottom_left"/>
+						<image png="grid.png"        tiled="yes" alpha="200" />
+						<image png="genode_logo.png" anchor="bottom_right" alpha="150"
+						                             xpos="-20" ypos="-20" />
+					</config>
+				</inline>
+			</content>
+		</config>
+	</start>
+	<start name="config_rom">
+		<binary name="fs_rom" />
+		<resource name="RAM" quantum="10M"/>
+		<provides><service name="ROM"/></provides>
+		<route>
+			<service name="File_system"> <child name="config_fs" /> </service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+	</start>
 	<start name="report_rom">
 		<resource name="RAM" quantum="1M"/>
 		<provides> <service name="Report"/> <service name="ROM"/> </provides>
@@ -362,11 +402,17 @@ set config {
 			<domain name="pointer"    layer="1" xray="no" origin="pointer" />
 			<domain name="panel"      layer="2" xray="no" />
 			<domain name=""           layer="3" ypos="18" height="-18" />
+			<domain name="noux"       layer="3" ypos="18" height="-18" color="#ff0000" />
+			<domain name="noux wm"    layer="3" ypos="18" height="-18" xray="opaque" color="#ff0000" />
+			<domain name="log"        layer="3" ypos="18" height="-18" color="#2040ff" />
 			<domain name="background" layer="4" xray="no" />
 
 			<policy label="pointer"          domain="pointer"/>
 			<policy label="status_bar"       domain="panel"/>
 			<policy label="launcher -> menu" domain="panel"/>
+			<policy label="launcher -> noux" domain="noux"/>
+			<policy label="launcher -> noux -> wm -> decorator" domain="noux wm"/>
+			<policy label="nit_fb_log"       domain="log"/>
 			<policy label="backdrop"         domain="background"/>
 			<policy label=""                 domain=""/>
 
@@ -392,23 +438,13 @@ set config {
 	</start>
 	<start name="backdrop" priority="-1">
 		<resource name="RAM" quantum="20M"/>
-		<config>
-			<libc>
-				<vfs>
-					<rom name="sticks_blue.png"/>
-					<rom name="genode_logo.png"/>
-					<rom name="grid.png"/>
-				</vfs>
-			</libc>
-			<fill color="#224433" />
-			<image png="sticks_blue.png" scale="zoom" anchor="bottom_left"/>
-			<image png="grid.png"        tiled="yes" alpha="200" />
-			<image png="genode_logo.png" anchor="bottom_right" alpha="150"
-			                             xpos="-20" ypos="-20" />
-		</config>
+		<configfile name="backdrop.config" />
 		<route>
-			<any-service> <child name="nitpicker"/> <parent/> <any-child/>
-			</any-service>
+			<service name="ROM">
+				<if-arg key="label" value="backdrop.config" />
+				<child name="config_rom"/>
+			</service>
+			<any-service> <parent/> <any-child/> </any-service>
 		</route>
 	</start>
 	<start name="nit_fb_log_terminal">
@@ -491,6 +527,106 @@ set config {
 						</vfs>
 					</libc>
 				</config>
+			</subsystem>
+			<subsystem name="noux" title="Noux">
+				<resource name="RAM" quantum="128M" />
+				<binary name="init" />
+
+
+<config>
+	<parent-provides>
+		<service name="ROM"/>
+		<service name="LOG"/>
+		<service name="CAP"/>
+		<service name="RAM"/>
+		<service name="RM"/>
+		<service name="CPU"/>
+		<service name="PD"/>
+		<service name="SIGNAL"/>
+		<service name="Timer"/>
+		<service name="Nitpicker"/>
+		<service name="File_system"/>
+	</parent-provides>
+	<default-route>
+		<any-service> <any-child/> <parent/> </any-service>
+	</default-route>
+	<start name="wm" >
+		<resource name="RAM" quantum="32M"/>
+		<provides><service name="Nitpicker"/></provides>
+		<route>
+			<any-service> <parent/> </any-service>
+		</route>
+	</start>
+	<start name="nit_fb">
+		<resource name="RAM" quantum="4M"/>
+		<config xpos="300" ypos="160" width="640" height="480" />
+		<provides>
+			<service name="Input"/>
+			<service name="Framebuffer"/>
+		</provides>
+	</start>
+	<start name="terminal">
+		<resource name="RAM" quantum="2M"/>
+		<provides><service name="Terminal"/></provides>
+	</start>
+	<start name="ram_fs">
+		<resource name="RAM" quantum="30M"/>
+		<provides><service name="File_system"/></provides>
+		<config>
+			<content>
+				<dir name="home">
+				</dir>
+				<dir name="tmp">
+				</dir>
+			</content>
+
+			<!-- constrain sessions according to their labels -->
+			<policy label="noux -> root" root="/" />
+			<policy label="noux -> home" root="/home" writeable="yes" />
+			<policy label="noux -> tmp"  root="/tmp"  writeable="yes" />
+		</config>
+	</start>
+	<start name="noux">
+		<resource name="RAM" quantum="50M" />
+		<route>
+			<service name="File_system">
+				<if-arg key="label" value="config"/> <parent/> </service>
+			<any-service> <any-child/> <parent/> </any-service>
+		</route>
+		<config>
+			<fstab>
+				<tar name="bash.tar" />
+				<tar name="coreutils.tar" />
+				<tar name="vim.tar" />
+
+				<dir name="dev">
+					<null />
+				</dir>
+
+				<dir name="home">
+					<fs label="home" />
+				</dir>
+
+				<dir name="config">
+					<fs label="config" />
+				</dir>
+
+				<dir name="tmp">
+					<fs label="tmp" />
+				</dir>
+
+			</fstab>
+			<start name="/bin/bash">
+				<env name="TERM" value="linux" />
+				<env name="HOME" value="/home" />
+				<env name="PATH" value="/bin" />
+				<arg value="--login" />
+			</start>
+		</config>
+	</start>
+</config>
+
+
 			</subsystem>
 			<subsystem name="testnit1" title="Nitpicker Test">
 				<resource name="RAM" quantum="2M" />
