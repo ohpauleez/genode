@@ -79,6 +79,7 @@ proc build_boot_image {binaries} {
 	foreach binary $binaries {
 		if {$binary != "core"} {
 			puts $fh " module /genode/$binary" } }
+	puts $fh " vbeset 0x117"
 	close $fh
 
 	install_pxe_bootloader_to_run_dir
