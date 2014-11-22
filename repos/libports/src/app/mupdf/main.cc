@@ -324,8 +324,6 @@ int main(int, char **)
 
 	static Input::Event *ev_buf = Genode::env()->rm_session()->attach(input.dataspace());
 
-	static unsigned jiffies;
-
 	int key_cnt = 0;
 
 	{
@@ -351,14 +349,6 @@ int main(int, char **)
 	for (;;) {
 		while (!input.is_pending()) {
 			timer.msleep(20);
-			jiffies++;
-
-			/* bring view to front every 2 seconds */
-			if (jiffies++ >= 100) {
-				nitpicker.enqueue<Command::To_front>(view_handle);
-				nitpicker.execute();
-				jiffies = 0;
-			}
 		}
 
 		for (int i = 0, num_ev = input.flush(); i < num_ev; i++) {
