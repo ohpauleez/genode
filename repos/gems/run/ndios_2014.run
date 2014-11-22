@@ -26,6 +26,7 @@ set build_components {
 	server/rom_prefetcher
 	server/part_blk
 	server/report_rom
+	server/nit_fader
 	test/libports/ncurses
 	test/nitpicker
 	app/mupdf
@@ -101,10 +102,11 @@ foreach pkg $noux_pkgs { exec tar cfv  bin/$pkg.tar -h -C bin/$pkg . }
 # generic modules
 set boot_modules {
 	core init timer ld.lib.so noux terminal ram_fs acpi_drv usb_drv
-	input_merger loader testnit nit_fb nic_drv rtc_drv
+	input_merger loader testnit nit_fb nic_drv rtc_drv nit_fader
 	nitpicker fs_rom terminal_log backdrop ahci rump_fs report_rom
 	nic_bridge mupdf rom_prefetcher launcher pointer status_bar
 	sticks_blue.png genode_logo.png grid.png
+	menu_view_styles.tar
 	part_blk libc.lib.so
 }
 
@@ -343,6 +345,7 @@ set config {
 		<config>
 			<rom>
 				<policy label="status_bar -> focus" report="nitpicker -> focus"/>
+				<policy label="launcher -> xray"    report="nitpicker -> xray"/>
 			</rom>
 		</config>
 	</start>
@@ -355,20 +358,26 @@ set config {
 			<any-service> <parent/> <any-child/> </any-service>
 		</route>
 		<config>
-			<report focus="yes" />
-			<domain name="pointer" layer="1" xray="no" origin="pointer" />
-			<domain name="panel"   layer="2" xray="no" />
-			<domain name=""        layer="3" ypos="18" height="-18" />
+			<report focus="yes" xray="yes" />
+			<domain name="pointer"    layer="1" xray="no" origin="pointer" />
+			<domain name="panel"      layer="2" xray="no" />
+			<domain name=""           layer="3" ypos="18" height="-18" />
+			<domain name="background" layer="4" xray="no" />
 
-			<policy label="pointer"    domain="pointer"/>
-			<policy label="status_bar" domain="panel"/>
-			<policy label=""           domain=""/>
+			<policy label="pointer"          domain="pointer"/>
+			<policy label="status_bar"       domain="panel"/>
+			<policy label="launcher -> menu" domain="panel"/>
+			<policy label="backdrop"         domain="background"/>
+			<policy label=""                 domain=""/>
 
 			<global-key name="KEY_SCROLLLOCK" operation="xray" />
 			<global-key name="KEY_SYSRQ"      operation="kill" />
 			<global-key name="KEY_PRINT"      operation="kill" />
 			<global-key name="KEY_F11"        operation="kill" />
 			<global-key name="KEY_F12"        operation="xray" />
+			<global-key name="KEY_LEFTMETA"   operation="xray" />
+
+			<background color="#000000" />
 		</config>
 	</start>
 	<start name="pointer">
@@ -382,7 +391,7 @@ set config {
 		</route>
 	</start>
 	<start name="backdrop" priority="-1">
-		<resource name="RAM" quantum="4M"/>
+		<resource name="RAM" quantum="20M"/>
 		<config>
 			<libc>
 				<vfs>
@@ -450,23 +459,6 @@ set config {
 			              <parent/> <any-child/> </any-service>
 		</route>
 	</start>
-	<start name="mupdf">
-		<resource name="RAM" quantum="110M"/>
-		<config>
-			<pdf name="slides.pdf"/>
-			<libc stdout="/dev/log" stderr="/dev/log">
-				<vfs>
-					<rom name="slides.pdf" />
-					<dir name="dev"> <log/> </dir>
-				</vfs>
-			</libc>
-		</config>
-		<route>
-			<service name="LOG"> <child name="terminal_log"/>  </service>
-			<any-service> <child name="nitpicker" />
-			              <parent/> <any-child/> </any-service>
-		</route>
-	</start>
 	<start name="loader">
 		<resource name="RAM" quantum="2M"></resource>
 		<provides><service name="Loader"/></provides>
@@ -483,6 +475,59 @@ set config {
 	<start name="rtc_drv">
 		<resource name="RAM" quantum="1M"/>
 		<provides><service name="Rtc"/></provides>
+	</start>
+	<start name="launcher">
+		<resource name="RAM" quantum="2G" />
+		<config visibility="xray">
+			<subsystem name="slides" title="Slides">
+				<resource name="RAM" quantum="110M" />
+				<binary name="mupdf" />
+				<config>
+					<pdf name="slides.pdf"/>
+					<libc stdout="/dev/log" stderr="/dev/log">
+						<vfs>
+							<rom name="slides.pdf" />
+							<dir name="dev"> <log/> </dir>
+						</vfs>
+					</libc>
+				</config>
+			</subsystem>
+			<subsystem name="testnit1" title="Nitpicker Test">
+				<resource name="RAM" quantum="2M" />
+				<binary name="testnit" />
+			</subsystem>
+			<subsystem name="testnit2" title="Nitpicker Test 2">
+				<resource name="RAM" quantum="2M" />
+				<binary name="testnit" />
+			</subsystem>
+			<subsystem name="testnit3" title="Nitpicker Test 3">
+				<resource name="RAM" quantum="2M" />
+				<binary name="testnit" />
+			</subsystem>
+			<subsystem name="scout2" title="Scoutx">
+				<resource name="RAM" quantum="20M" />
+				<binary name="scout" />
+			</subsystem>
+			<subsystem name="testnit4" title="Nitpicker Testx">
+				<resource name="RAM" quantum="2M" />
+				<binary name="testnit" />
+			</subsystem>
+			<subsystem name="testnit5">
+				<resource name="RAM" quantum="2M" />
+				<binary name="testnit" />
+			</subsystem>
+			<subsystem name="testnit6">
+				<resource name="RAM" quantum="2M" />
+				<binary name="testnit" />
+			</subsystem>
+		</config>
+		<route>
+			<service name="ROM"> <if-arg key="label" value="xray"/>
+				<child name="report_rom" />
+			</service>
+			<service name="LOG"> <child name="terminal_log" /> </service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
 	</start>
 </config>
 }
