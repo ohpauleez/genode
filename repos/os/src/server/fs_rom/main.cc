@@ -21,6 +21,7 @@
 #include <base/env.h>
 #include <base/printf.h>
 #include <os/path.h>
+#include <timer_session/connection.h>
 
 
 /*********************************************
@@ -171,6 +172,8 @@ class Rom_session_component : public Genode::Rpc_object<Genode::Rom_session>
 		Genode::Lock                      _sigh_lock;
 		Genode::Signal_context_capability _sigh;
 
+		Timer::Connection _timer;
+
 		/**
 		 * Dispatcher that is called each time when the requested file is not
 		 * yet available and the compound directory changes
@@ -223,7 +226,7 @@ class Rom_session_component : public Genode::Rpc_object<Genode::Rom_session>
 
 				catch (Invalid_handle)    { PERR("Invalid_handle"); }
 				catch (Invalid_name)      { PERR("Invalid_name"); }
-				catch (Lookup_failed)     { PERR("Lookup_failed"); }
+				catch (Lookup_failed)     { PERR("Lookup_failed (dir)"); }
 				catch (Permission_denied) { PERR("Permission_denied"); }
 				catch (Name_too_long)     { PERR("Name_too_long"); }
 				catch (No_space)          { PERR("No_space"); }
@@ -240,27 +243,35 @@ class Rom_session_component : public Genode::Rpc_object<Genode::Rom_session>
 		/**
 		 * Open file with specified name at the file system
 		 */
-		static File_system::File_handle _open_file(File_system::Session &fs,
-		                                           Path const &path)
+		File_system::File_handle _open_file(File_system::Session &fs,
+		                                    Path const &path)
 		{
 			using namespace File_system;
 
 			File_system::File_handle file_handle;
 
-			try {
+			unsigned num_attempts = 10;
 
-				Dir_handle dir = _open_compound_dir(fs, path, false);
-				Handle_guard guard(fs, dir);
+			while (num_attempts--) {
+				try {
 
-				/* open file */
-				Genode::Path<PATH_MAX_LEN> file_name(path.base());
-				file_name.keep_only_last_element();
-				file_handle = fs.file(dir, file_name.base() + 1,
-				                      File_system::READ_ONLY, false);
+					Dir_handle dir = _open_compound_dir(fs, path, false);
+					Handle_guard guard(fs, dir);
+
+					/* open file */
+					Genode::Path<PATH_MAX_LEN> file_name(path.base());
+					file_name.keep_only_last_element();
+					file_handle = fs.file(dir, file_name.base() + 1,
+					                      File_system::READ_ONLY, false);
+
+					break;
+				}
+				catch (Invalid_handle)    { PERR("Invalid_handle"); }
+				catch (Invalid_name)      { PERR("Invalid_name"); }
+				catch (Lookup_failed)     { PERR("Lookup_failed (file)"); }
+
+				_timer.msleep(20);
 			}
-			catch (Invalid_handle)    { PERR("Invalid_handle"); }
-			catch (Invalid_name)      { PERR("Invalid_name"); }
-			catch (Lookup_failed)     { PERR("Lookup_failed"); }
 
 			return file_handle;
 		}
