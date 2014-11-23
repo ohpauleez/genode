@@ -43,6 +43,7 @@ set build_components {
 	app/pointer
 	app/floating_window_layouter
 	app/decorator
+	app/crystals
 	virtualbox
 }
 
@@ -184,6 +185,7 @@ lappend binaries "menu_view"
 lappend binaries "virtualbox"
 lappend binaries "floating_window_layouter"
 lappend binaries "decorator"
+lappend binaries "crystals"
 
 # qt applications
 lappend binaries "arora"
@@ -253,7 +255,7 @@ if {$data_provider == "grub"} {
 #######################################
 
 set config {
-<config prio_levels="2">
+<config prio_levels="4">
 	<parent-provides>
 		<service name="ROM"/>
 		<service name="LOG"/>
@@ -328,6 +330,7 @@ set config {
 		<provides><service name="ROM"/></provides>
 		<route>
 			<service name="File_system"> <child name="rump_fs" /> </service>
+			<service name="LOG"> <child name="terminal_log" /> </service>
 			<any-service> <parent/> <any-child/> </any-service>
 		</route>
 	</start>
@@ -413,15 +416,16 @@ set config {
 		</route>
 		<config>
 			<report focus="yes" xray="yes" />
-			<domain name="pointer"    layer="1" xray="no" origin="pointer" />
-			<domain name="panel"      layer="2" xray="no" />
-			<domain name=""           layer="3" ypos="18" height="-18" />
-			<domain name="noux"       layer="3" ypos="18" height="-18" color="#ff0000" />
-			<domain name="noux wm"    layer="3" ypos="18" height="-18" xray="opaque" color="#ff0000" />
-			<domain name="arora"      layer="3" ypos="18" height="-18" color="#ffff00" />
-			<domain name="arora wm"   layer="3" ypos="18" height="-18" xray="opaque" color="#ffff00" />
-			<domain name="log"        layer="3" ypos="18" height="-18" color="#2040ff" />
-			<domain name="background" layer="4" xray="no" />
+			<domain name="pointer"      layer="1" xray="no" origin="pointer" />
+			<domain name="panel"        layer="2" xray="no" />
+			<domain name=""             layer="3" ypos="18" height="-18" />
+			<domain name="noux"         layer="3" ypos="18" height="-18" color="#ff0000" />
+			<domain name="noux wm"      layer="3" ypos="18" height="-18" xray="opaque" color="#ff0000" />
+			<domain name="arora"        layer="3" ypos="18" height="-18" color="#ffff00" />
+			<domain name="arora wm"     layer="3" ypos="18" height="-18" xray="opaque" color="#ffff00" />
+			<domain name="arora plugin" layer="3" ypos="18" height="-18" color="#ff00ff" />
+			<domain name="log"          layer="4" ypos="18" height="-18" color="#2040ff" />
+			<domain name="background"   layer="5" xray="no" />
 
 			<policy label="pointer"          domain="pointer"/>
 			<policy label="status_bar"       domain="panel"/>
@@ -430,6 +434,7 @@ set config {
 			<policy label="launcher -> noux -> wm -> decorator" domain="noux wm"/>
 			<policy label="launcher -> arora" domain="arora"/>
 			<policy label="launcher -> arora -> wm -> decorator" domain="arora wm"/>
+			<policy label="launcher -> arora -> wm -> loader"    domain="arora plugin"/>
 			<policy label="nit_fb_log"       domain="log"/>
 			<policy label="backdrop"         domain="background"/>
 			<policy label=""                 domain=""/>
@@ -511,7 +516,7 @@ set config {
 				<parent/>
 			</service>
 			<service name="LOG"> <child name="terminal_log"/> </service>
-<!--			<service name="ROM"> <child name="rom_provider"/> </service>-->
+			<service name="ROM"> <child name="rom_provider"/> </service>
 			<any-service> <parent/> <any-child/> </any-service>
 		</route>
 	</start>
@@ -519,7 +524,7 @@ set config {
 		<resource name="RAM" quantum="1M"/>
 		<provides><service name="Rtc"/></provides>
 	</start>
-	<start name="launcher" priority="-1">
+	<start name="launcher" priority="-2">
 		<resource name="RAM" quantum="2G" />
 		<config visibility="xray">
 
