@@ -27,8 +27,10 @@
 		<provides><service name="Nitpicker"/></provides>
 		<config>
 			<domain name="pointer" layer="1" xray="no" origin="pointer" />
-			<domain name="" layer="2" />
+			<domain name="overlay" layer="2" />
+			<domain name="" layer="3" />
 			<policy label="pointer"    domain="pointer"/>
+			<policy label="launchpad -> crystals"    domain="overlay"/>
 			<policy label="" domain=""/>
 			<global-key name="KEY_F1" operation="kill" />
 			<global-key name="KEY_F2" operation="xray" />
@@ -40,7 +42,7 @@
 	<start name="launchpad">
 		<resource name="RAM" quantum="2G"/>
 		<config xpos="50" ypos="10" width="400" height="400">
-			<launcher name="testnit" ram_quota="1M" />
+			<launcher name="crystals" ram_quota="8M" />
 			<launcher name="launchpad" ram_quota="6M">
 				<config xpos="90" ypos="50" width="400" height="400">
 					<launcher name="testnit" ram_quota="512K" />
