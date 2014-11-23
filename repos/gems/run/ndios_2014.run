@@ -112,7 +112,9 @@ set boot_modules {
 	nic_bridge mupdf rom_prefetcher launcher pointer status_bar
 	sticks_blue.png genode_logo.png grid.png
 	menu_view_styles.tar
-	part_blk libc.lib.so
+	part_blk libc.lib.so libm.lib.so
+	rump.lib.so rump_fs.lib.so
+	libpng.lib.so zlib.lib.so menu_view
 }
 
 # platform-specific modules
@@ -205,8 +207,8 @@ regsub -all {bin/} [glob bin/*.lib.so] "" shared_libraries
 # Copy content to CD
 #
 
-#set data_provider "iso9660"
-set data_provider "grub"
+set data_provider "iso9660"
+#set data_provider "grub"
 
 if {$data_provider == "iso9660"} {
 
@@ -275,7 +277,7 @@ set config {
 		<provides><service name="Timer"/></provides>
 		<route> <any-service> <parent/> </any-service> </route>
 	</start>
-	<start name="acpi">
+	<start name="acpi" priority="-1">
 		<resource name="RAM" quantum="16M"/>
 		<binary name="acpi_drv"/>
 		<provides>
@@ -286,23 +288,54 @@ set config {
 			<any-service> <parent/> <any-child /> </any-service>
 		</route>
 	</start>
-	<start name="fb_drv">
+	<start name="fb_drv" priority="-1">
 		<resource name="RAM" quantum="5M"/>
 		<provides><service name="Framebuffer"/></provides>
 		<config buffered="yes" width="1024" height="768" />
 	</start>
-	<start name="usb_drv">
+	<start name="usb_drv" priority="-1">
 		<resource name="RAM" quantum="7M"/>
-		<provides><service name="Input"/></provides>
+		<provides>
+			<service name="Input"/>
+			<service name="Block"/>
+		</provides>
 		<config uhci="yes" ehci="yes" xhci="yes">
-			<hid/>
+			<hid/> <storage/>
 		</config>
 	</start>
-	<start name="ps2_drv">
+	<start name="usb_part_blk" priority="-1">
+		<binary name="part_blk" />
+		<resource name="RAM" quantum="10M" />
+		<provides><service name="Block" /></provides>
+		<route>
+			<any-service><child name="usb_drv"/> <parent/><any-child/></any-service>
+		</route>
+		<config>
+			<policy label="rump_fs" partition="1"/>
+		</config>
+	</start>
+	<start name="rump_fs" priority="-1">
+		<resource name="RAM" quantum="128M" />
+		<provides><service name="File_system"/></provides>
+		<config fs="ext2fs"><policy label="" root="/" writeable="no"/></config>
+		<route>
+			<any-service> <child name="usb_part_blk"/> <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+	<start name="rom_provider" priority="-1">
+		<binary name="fs_rom" />
+		<resource name="RAM" quantum="200M"/>
+		<provides><service name="ROM"/></provides>
+		<route>
+			<service name="File_system"> <child name="rump_fs" /> </service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+	<start name="ps2_drv" priority="-1">
 		<resource name="RAM" quantum="1M"/>
 		<provides><service name="Input"/></provides>
 	</start>
-	<start name="input_merger">
+	<start name="input_merger" priority="-1">
 		<resource name="RAM" quantum="1M" />
 		<provides>
 			<service name="Input" />
@@ -321,42 +354,7 @@ set config {
 			<any-service> <parent /> </any-service>
 		</route>
 	</start>
-<!--
-	<start name="nic_drv">
-		<resource name="RAM" quantum="2M"/>
-		<provides><service name="Nic"/></provides>
-	</start>
-	<start name="nic_bridge">
-		<resource name="RAM" quantum="4M"/>
-		<provides><service name="Nic"/></provides>
-		<config>
-			<policy label="cli_monitor -> lighttpd" ip_addr="10.0.2.55"/>
-			<policy label="cli_monitor -> arora_static" ip_addr="10.0.2.56"/>
-		</config>
-		<route>
-			<service name="Nic"> <child name="nic_drv"/> </service>
-			<any-service> <parent/> <any-child/> </any-service>
-		</route>
-	</start>
--->
-<!--
-	<start name="nitpicker">
-		<resource name="RAM" quantum="1M"/>
-		<provides><service name="Nitpicker"/></provides>
-		<route>
-			<service name="Framebuffer"> <child name="fb_drv"/> </service>
-			<service name="ROM">
-				<if-arg key="filename" value="nitpicker.config" />
-				<child name="config_rom"/>
-			</service>
-			<any-service> <child name="fb_drv" />
-			              <child name="d3m" />
-			              <parent/> <any-child/> </any-service>
-		</route>
-		<configfile name="nitpicker.config" />
-	</start>-->
-
-	<start name="config_fs">
+	<start name="config_fs" priority="-1">
 		<binary name="ram_fs" />
 		<resource name="RAM" quantum="10M"/>
 		<provides><service name="File_system"/></provides>
@@ -380,10 +378,13 @@ set config {
 						                             xpos="-20" ypos="-20" />
 					</config>
 				</inline>
+				<inline name="log.config">
+					<config xpos="600" ypos="20" width="400" height="600" />
+				</inline>
 			</content>
 		</config>
 	</start>
-	<start name="config_rom">
+	<start name="config_rom" priority="-1">
 		<binary name="fs_rom" />
 		<resource name="RAM" quantum="10M"/>
 		<provides><service name="ROM"/></provides>
@@ -392,7 +393,7 @@ set config {
 			<any-service> <parent/> <any-child/> </any-service>
 		</route>
 	</start>
-	<start name="report_rom">
+	<start name="report_rom" priority="-1">
 		<resource name="RAM" quantum="1M"/>
 		<provides> <service name="Report"/> <service name="ROM"/> </provides>
 		<config>
@@ -402,7 +403,7 @@ set config {
 			</rom>
 		</config>
 	</start>
-	<start name="nitpicker">
+	<start name="nitpicker" priority="-1">
 		<resource name="RAM" quantum="1M"/>
 		<provides><service name="Nitpicker"/></provides>
 		<route>
@@ -443,10 +444,10 @@ set config {
 			<background color="#000000" />
 		</config>
 	</start>
-	<start name="pointer">
+	<start name="pointer" priority="-1">
 		<resource name="RAM" quantum="1M"/>
 	</start>
-	<start name="status_bar">
+	<start name="status_bar" priority="-1">
 		<resource name="RAM" quantum="1M"/>
 		<route>
 			<service name="ROM"> <child name="report_rom"/> </service>
@@ -464,20 +465,19 @@ set config {
 			<any-service> <parent/> <any-child/> </any-service>
 		</route>
 	</start>
-	<start name="nit_fb_log_terminal">
+	<start name="nit_fb_log_terminal" priority="-1">
 		<binary name="terminal"/>
 		<resource name="RAM" quantum="1M"/>
 		<provides><service name="Terminal"/></provides>
 		<route>
 			<any-service> <child name="nit_fb_log" />
-			              <child name="nit_fb_log" />
 			              <parent/> <any-child/> </any-service>
 		</route>
 		<config>
 			<font size="8"/>
 		</config>
 	</start>
-	<start name="terminal_log">
+	<start name="terminal_log" priority="-1">
 		<binary name="terminal_log"/>
 		<resource name="RAM" quantum="1M"/>
 		<provides><service name="LOG"/></provides>
@@ -486,33 +486,23 @@ set config {
 			              <parent/> <any-child/> </any-service>
 		</route>
 	</start>
-<!--	<start name="config_rom">
-		<binary name="fs_rom" />
-		<resource name="RAM" quantum="10M"/>
-		<provides><service name="ROM"/></provides>
-		<route>
-			<service name="File_system"> <child name="config_fs" /> </service>
-			<any-service> <parent/> <any-child/> </any-service>
-		</route>
-	</start>-->
-	<start name="nit_fb_log">
+	<start name="nit_fb_log" priority="-1">
 		<binary name="nit_fb" />
 		<resource name="RAM" quantum="4M"/>
+		<configfile name="log.config" />
+		<route>
+			<service name="ROM">
+				<if-arg key="label" value="log.config" />
+				<child name="config_rom"/>
+			</service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
 		<provides>
 			<service name="Input"/>
 			<service name="Framebuffer"/>
 		</provides>
-		<config xpos="300" ypos="20" width="500" height="700" />
-		<route>
-<!--			<service name="ROM">
-				<if-arg key="filename" value="nit_fb_log.config" />
-				<child name="config_rom"/>
-			</service>-->
-			<any-service> <child name="nitpicker" />
-			              <parent/> <any-child/> </any-service>
-		</route>
 	</start>
-	<start name="loader">
+	<start name="loader" priority="-1">
 		<resource name="RAM" quantum="2M"></resource>
 		<provides><service name="Loader"/></provides>
 		<route>
@@ -525,11 +515,11 @@ set config {
 			<any-service> <parent/> <any-child/> </any-service>
 		</route>
 	</start>
-	<start name="rtc_drv">
+	<start name="rtc_drv" priority="-1">
 		<resource name="RAM" quantum="1M"/>
 		<provides><service name="Rtc"/></provides>
 	</start>
-	<start name="launcher">
+	<start name="launcher" priority="-1">
 		<resource name="RAM" quantum="2G" />
 		<config visibility="xray">
 
@@ -726,8 +716,39 @@ set config {
 		</config>
 		<route>
 			<service name="ROM"> <if-arg key="label" value="xray"/>
-				<child name="report_rom" />
-			</service>
+				<child name="report_rom" /> </service>
+
+			<service name="ROM"> <if-arg key="label" value="menu_view" />
+				<parent/> </service>
+
+			<service name="ROM"> <if-arg key="label" value="ld.lib.so" />
+				<parent/> </service>
+
+			<service name="ROM"> <if-arg key="label" value="menu_view -> ld.lib.so" />
+				<parent/> </service>
+
+			<service name="ROM"> <if-arg key="label" value="report_rom" />
+				<parent/> </service>
+
+			<service name="ROM"> <if-arg key="label" value="nit_fader" />
+				<parent/> </service>
+
+			<service name="ROM"> <if-arg key="label" value="menu_view -> libc.lib.so" />
+				<parent/> </service>
+
+			<service name="ROM"> <if-arg key="label" value="menu_view -> libpng.lib.so" />
+				<parent/> </service>
+
+			<service name="ROM"> <if-arg key="label" value="menu_view -> libm.lib.so" />
+				<parent/> </service>
+
+			<service name="ROM"> <if-arg key="label" value="menu_view -> zlib.lib.so" />
+				<parent/> </service>
+
+			<service name="File_system">
+				<child name="config_fs" /> </service>
+
+			<service name="ROM"> <child name="rom_provider"/> </service>
 			<service name="LOG"> <child name="terminal_log" /> </service>
 			<any-service> <parent/> <any-child/> </any-service>
 		</route>
@@ -742,4 +763,12 @@ build_boot_image $boot_modules
 
 append qemu_args " -m 1024 "
 
+set disk_image "[run_dir].img"
+append qemu_args " -drive if=none,id=disk,file=$disk_image "
+append qemu_args {  \
+-device usb-ehci,id=ehci \
+-device usb-storage,bus=ehci.0,drive=disk \
+-boot order=d }
+
 run_genode_until forever
+#exec qemu-system-x86_64 -cpu core2duo "$qemu_args" -serial mon:stdio -cdrom var/run/ndios_2014.iso
