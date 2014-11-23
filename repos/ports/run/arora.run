@@ -10,7 +10,7 @@ set build_components [qt5_build_components feature]
 
 append build_components {
 	server/loader server/tar_rom server/nit_fb app/launchpad test/nitpicker
-	app/arora
+	app/arora app/crystals
 }
 
 build $build_components
@@ -77,6 +77,7 @@ append boot_modules {
 	launchpad
 	testnit
 	arora
+	crystals
 	ld.lib.so
 	libc.lib.so libm.lib.so lwip.lib.so
 	zlib.lib.so libpng.lib.so jpeg.lib.so libssl.lib.so libcrypto.lib.so
