@@ -30,6 +30,7 @@ set build_components {
 	server/nit_fader
 	server/wm
 	server/tar_rom
+	server/fade_fb
 	test/libports/ncurses
 	test/nitpicker
 	app/mupdf
@@ -108,7 +109,7 @@ foreach pkg $noux_pkgs { exec tar cfv  bin/$pkg.tar -h -C bin/$pkg . }
 # generic modules
 set boot_modules {
 	core init timer ld.lib.so noux terminal ram_fs acpi_drv usb_drv
-	input_merger loader testnit nit_fb nic_drv rtc_drv nit_fader
+	input_merger loader testnit nit_fb nic_drv rtc_drv nit_fader fade_fb
 	nitpicker fs_rom terminal_log backdrop ahci rump_fs report_rom
 	nic_bridge mupdf rom_prefetcher launcher pointer status_bar
 	sticks_blue.png genode_logo.png grid.png
@@ -492,7 +493,7 @@ set config {
 		</route>
 	</start>
 	<start name="nit_fb_log" priority="-1">
-		<binary name="nit_fb" />
+		<binary name="fade_fb" />
 		<resource name="RAM" quantum="4M"/>
 		<configfile name="log.config" />
 		<route>
