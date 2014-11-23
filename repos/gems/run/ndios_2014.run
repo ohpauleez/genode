@@ -328,13 +328,29 @@ set config {
 	</start>
 	<start name="rom_provider" priority="-1">
 		<binary name="fs_rom" />
-		<resource name="RAM" quantum="200M"/>
+		<resource name="RAM" quantum="128M"/>
 		<provides><service name="ROM"/></provides>
 		<route>
 			<service name="File_system"> <child name="rump_fs" /> </service>
 			<service name="LOG"> <child name="terminal_log" /> </service>
 			<any-service> <parent/> <any-child/> </any-service>
 		</route>
+	</start>
+	<start name="rom_prefetcher" priority="-3">
+		<resource name="RAM" quantum="1M"/>
+		<provides><service name="ROM"/></provides>
+		<route>
+			<service name="LOG"> <parent/> </service>
+			<service name="ROM"> <child name="rom_provider"/> </service>
+			<any-service> <parent/> <any-child /> </any-service> </route>
+		<config>}
+
+foreach path "[glob bin/*.lib.so] [glob bin/*.tar]" {
+	set file [file tail $path]
+	append config "			<rom name=\"$file\" />\n" }
+
+append config {
+		</config>
 	</start>
 	<start name="ps2_drv" priority="-1">
 		<resource name="RAM" quantum="1M"/>
@@ -426,7 +442,7 @@ set config {
 		</config>
 	</start>
 	<start name="nitpicker" priority="-1">
-		<resource name="RAM" quantum="1M"/>
+		<resource name="RAM" quantum="2M"/>
 		<provides><service name="Nitpicker"/></provides>
 		<route>
 			<service name="Framebuffer"> <child name="fb_drv"/> </service>
@@ -812,6 +828,9 @@ set config {
 				<parent/> </service>
 
 			<service name="ROM"> <if-arg key="label" value="menu_view -> zlib.lib.so" />
+				<parent/> </service>
+
+			<service name="ROM"> <if-arg key="label" value="menu_view -> menu_view_styles.tar" />
 				<parent/> </service>
 
 			<service name="ROM"> <if-arg key="label" value="vbox -> vbox -> hypervisor_info_page" />
