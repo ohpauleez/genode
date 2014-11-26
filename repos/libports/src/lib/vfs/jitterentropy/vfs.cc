@@ -12,25 +12,28 @@
  */
 
 /* Genode includes */
-#include <libc-plugin/vfs.h>
+#include <vfs/file_system_factory.h>
 
 /* local includes */
 #include <vfs_jitterentropy.h>
 
 
-struct Jitterentropy_factory : Libc::File_system_factory
+struct Jitterentropy_factory : Vfs::File_system_factory
 {
-	Jitterentropy_factory() : File_system_factory("jitterentropy") { }
+	Jitterentropy_factory() { PDBG("called"); }
 
-	Vfs::File_system *create(Genode::Xml_node node)
+	Vfs::File_system *create(Genode::Xml_node node) override
 	{
+		PDBG("create jitterentropy file system");
 		return new (Genode::env()->heap()) Jitterentropy_file_system(node);
 	}
 };
 
 
-extern "C" Libc::File_system_factory *Libc_file_system_factory(void)
+Vfs::File_system_factory &vfs_file_system_factory()
 {
-	static Jitterentropy_factory factory;
-	return &factory;
+	static Jitterentropy_factory inst;
+	PDBG("return inst");
+	return inst;
 }
+
