@@ -82,9 +82,10 @@ May - Release 15.05
 ===================
 
 * Comprehensive documentation of the Genode foundations
-* NOVA kernel-resource management
 * Kernel-protected capabilities for the base-hw kernel
 * seL4 microkernel as base platform
+* Refined platform-driver architecture (support for MSIs, assignment of
+  I/O resources to drivers, standardized configuration)
 
 
 August - Release 15.08
@@ -94,8 +95,7 @@ August - Release 15.08
   and management of Genode subsystems and the interaction with files
 * Accommodation of typical desktop-computing tasks (e.g., email)
 * Interactive tools for observing the system behavior
-* Refined platform-driver architecture (support for MSIs, assignment of
-  I/O resources to drivers, standardized configuration)
+* NOVA kernel-resource management
 
 
 November - Release 15.11
