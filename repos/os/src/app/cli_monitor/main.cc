@@ -14,6 +14,8 @@
 /* Genode includes */
 #include <os/config.h>
 #include <cap_session/connection.h>
+#include <vfs/file_system_factory.h>
+#include <vfs/dir_file_system.h>
 
 /* public CLI-monitor includes */
 #include <cli_monitor/ram.h>
@@ -70,6 +72,30 @@ static size_t ram_preservation_from_config()
 }
 
 
+/**
+ * Return singleton instance of the subsystem config registry
+ */
+static Subsystem_config_registry &subsystem_config_registry()
+{
+	try {
+
+		/* initialize virtual file system */
+		static Vfs::Dir_file_system
+			root_dir(Genode::config()->xml_node().sub_node("vfs"),
+			         Vfs::global_file_system_factory());
+
+		static Subsystem_config_registry inst(root_dir);
+
+		return inst;
+
+	} catch (Genode::Xml_node::Nonexistent_sub_node) {
+
+		PERR("missing '<vfs>' configuration");
+		throw;
+	}
+}
+
+
 int main(int argc, char **argv)
 {
 	/* look for dynamic linker */
@@ -115,12 +141,12 @@ int main(int argc, char **argv)
 	Kill_command kill_command(children, process_args);
 	commands.insert(&kill_command);
 	commands.insert(new Gdb_command(ram, cap, children,
-	                                Genode::config()->xml_node(),
+	                                subsystem_config_registry(),
 	                                process_args,
 	                                yield_response_sig_cap,
 	                                kill_gdb_sig_cap));
 	commands.insert(new Start_command(ram, cap, children,
-	                                  Genode::config()->xml_node(),
+	                                  subsystem_config_registry(),
 	                                  process_args,
 	                                  yield_response_sig_cap));
 	commands.insert(new Status_command(ram, children));
