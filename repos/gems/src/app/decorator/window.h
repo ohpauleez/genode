@@ -14,14 +14,38 @@
 #ifndef _WINDOW_H_
 #define _WINDOW_H_
 
+/* Genode includes */
 #include <util/lazy_value.h>
 #include <decorator/window.h>
+#include <os/config.h>
 
 /* gems includes */
 #include <gems/animator.h>
 
 
 namespace Decorator { class Window; }
+
+
+static bool config_fill_background()
+{
+	static bool initialized     = false;
+	static bool fill_background = false;
+
+	if (initialized)
+		return fill_background;
+
+	try {
+		Genode::Xml_node config = Genode::config()->xml_node();
+		fill_background = config.has_attribute("background")
+		               && config.attribute("background").has_value("fill");
+	} catch (...) { }
+
+	initialized = true;
+
+	return fill_background;
+}
+
+
 
 
 class Decorator::Window : public Window_base
@@ -334,7 +358,7 @@ void Decorator::Window::draw(Decorator::Canvas_base &canvas,
 	Point p1 = rect.p1();
 	Point p2 = rect.p2();
 
-	bool const draw_content = false;
+	bool const draw_content = config_fill_background();
 
 	if (draw_content)
 		canvas.draw_box(geometry(), Color(10, 20, 40));
