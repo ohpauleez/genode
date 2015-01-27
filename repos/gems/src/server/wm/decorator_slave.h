@@ -63,8 +63,9 @@ class Wm::Decorator_slave
 					_window_layout_rom_service("ROM", window_layout_rom),
 					_pointer_rom_service("ROM", pointer_rom),
 					_hover_report_service("Report", hover_report)
-
-				{ }
+				{
+					configure("<config/>");
+				}
 
 				Genode::Service *resolve_session_request(const char *service_name,
 				                                         const char *args) override
