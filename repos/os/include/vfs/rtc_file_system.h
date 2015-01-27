@@ -18,9 +18,6 @@
 #include <rtc_session/connection.h>
 #include <vfs/file_system.h>
 
-/* libc includes */
-#include <time.h>
-
 namespace Vfs { class Rtc_file_system; }
 
 
@@ -59,22 +56,7 @@ class Vfs::Rtc_file_system : public Single_file_system
 		Read_result read(Vfs_handle *vfs_handle, char *dst, file_size count,
 		                 file_size &out_count) override
 		{
-			time_t t = _rtc.current_time() / 1000000ULL;
-
-			struct tm *tm = localtime(&t);
-
-			char buf[16 + 1 + 1];
-			Genode::snprintf(buf, sizeof(buf), "%04d-%02d-%02d %02d:%02d\n",
-			                 1900 + tm->tm_year, /* years since 1900 */
-			                 1 + tm->tm_mon,     /* months since January [0-11] */
-			                 tm->tm_mday, tm->tm_hour, tm->tm_min);
-
-			file_size len = count > sizeof(buf) ? sizeof(buf) : count;
-			Genode::memcpy(dst, buf, len);
-
-			out_count = len;
-
-			return READ_OK;
+			return READ_ERR_INVALID;
 		}
 };
 
