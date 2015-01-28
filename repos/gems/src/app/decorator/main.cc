@@ -95,6 +95,8 @@ struct Decorator::Main : Window_factory_base
 	 */
 	Main(Signal_receiver &sig_rec) : sig_rec(sig_rec)
 	{
+		env()->parent()->upgrade(nitpicker, "ram_quota=32K");
+
 		window_layout.sigh(window_layout_dispatcher);
 		pointer.sigh(pointer_dispatcher);
 
