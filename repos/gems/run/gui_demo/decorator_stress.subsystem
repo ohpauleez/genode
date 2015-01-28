@@ -1,0 +1,73 @@
+<subsystem name="decorator_stress" help="Window-decorator stress test">
+  <resource name="RAM" quantum="80M" />
+  <binary name="init" />
+  <config prio_levels="2">
+    <parent-provides>
+      <service name="ROM"/>
+      <service name="RAM"/>
+      <service name="CAP"/>
+      <service name="PD"/>
+      <service name="RM"/>
+      <service name="CPU"/>
+      <service name="LOG"/>
+      <service name="SIGNAL"/>
+      <service name="Nitpicker" />
+      <service name="Timer" />
+    </parent-provides>
+    <default-route>
+      <any-service> <parent/> <any-child/> </any-service>
+    </default-route>
+
+    <start name="nit_fb">
+      <resource name="RAM" quantum="3M"/>
+      <provides> <service name="Framebuffer"/>
+                 <service name="Input"/> </provides>
+      <config width="800" height="600"/>
+      <route> <any-service> <parent/> </any-service> </route>
+    </start>
+
+    <start name="nitpicker">
+      <resource name="RAM" quantum="1M"/>
+      <provides><service name="Nitpicker"/></provides>
+      <config>
+        <domain name="" layer="2" />
+        <policy label="" domain=""/>
+        <report pointer="yes" />
+      </config>
+    </start>
+
+    <start name="report_rom">
+      <resource name="RAM" quantum="2M"/>
+      <provides> <service name="ROM" />
+                 <service name="Report" /> </provides>
+      <config>
+        <rom>
+          <policy label="decorator -> pointer"
+                 report="nitpicker -> pointer"/>
+          <policy label="decorator -> window_layout"
+                 report="test-decorator_stress -> window_layout"/>
+        </rom>
+      </config>
+    </start>
+
+    <start name="test-decorator_stress">
+      <resource name="RAM" quantum="3M"/>
+    </start>
+
+    <start name="decorator">
+      <resource name="RAM" quantum="8M"/>
+      <config background="fill"/>
+      <route>
+        <service name="ROM">
+          <if-arg key="label" value="pointer" />
+          <child name="report_rom" />
+        </service>
+        <service name="ROM">
+          <if-arg key="label" value="window_layout" />
+          <child name="report_rom" />
+        </service>
+        <any-service> <any-child/> <parent/> </any-service>
+      </route>
+    </start>
+  </config>
+</subsystem>

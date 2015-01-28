@@ -1,0 +1,89 @@
+<subsystem name="menu_view" help="Menu view test">
+  <resource name="RAM" quantum="32M" />
+  <binary name="init" />
+  <config prio_levels="2">
+    <parent-provides>
+      <service name="ROM"/>
+      <service name="RAM"/>
+      <service name="CAP"/>
+      <service name="PD"/>
+      <service name="RM"/>
+      <service name="CPU"/>
+      <service name="LOG"/>
+      <service name="SIGNAL"/>
+      <service name="Nitpicker" />
+      <service name="Timer" />
+    </parent-provides>
+    <default-route>
+      <any-service> <parent/> <any-child/> </any-service>
+    </default-route>
+
+    <start name="dynamic_rom">
+      <resource name="RAM" quantum="4M"/>
+      <provides><service name="ROM"/></provides>
+      <config verbose="yes">
+        <rom name="dialog">
+          <inline description="example menu">
+            <dialog>
+              <frame>
+                <vbox>
+                  <button name="virtualbox">
+                    <label text="VirtualBox"/>
+                  </button>
+                  <button name="toolchain" hovered="yes">
+                    <label text="Tool chain"/>
+                  </button>
+                  <button name="log" hovered="yes" selected="yes">
+                    <label text="Log window"/>
+                  </button>
+                  <button name="config" selected="yes">
+                    <label text="Configuration"/>
+                  </button>
+                </vbox>
+              </frame>
+            </dialog>
+          </inline>
+          <sleep milliseconds="2000" />
+          <inline description="example menu">
+            <dialog>
+              <frame>
+                <vbox>
+                  <button name="virtualbox" hovered="yes">
+                    <label text="VirtualBox"/>
+                  </button>
+                  <button name="toolchain">
+                    <label text="Tool chain"/>
+                  </button>
+                  <button name="log" selected="yes">
+                    <label text="Log window"/>
+                  </button>
+                  <button name="config" selected="yes" hovered="yes">
+                    <label text="Configuration"/>
+                  </button>
+                </vbox>
+              </frame>
+            </dialog>
+          </inline>
+          <sleep milliseconds="2000" />
+        </rom>
+      </config>
+    </start>
+
+    <start name="menu_view">
+      <resource name="RAM" quantum="5M"/>
+      <config xpos="200" ypos="100">
+        <libc>
+          <vfs>
+            <tar name="menu_view_styles.tar" />
+          </vfs>
+        </libc>
+      </config>
+      <route>
+        <service name="ROM"> <if-arg key="label" value="dialog"/>
+          <child name="dynamic_rom" />
+        </service>
+        <any-service> <parent/> <any-child/> </any-service>
+      </route>
+    </start>
+  </config>
+</subsystem>

@@ -1,0 +1,108 @@
+<subsystem name="wm" help="Demo of the window manager">
+  <resource name="RAM" quantum="80M" />
+  <binary name="init" />
+  <config prio_levels="2">
+    <parent-provides>
+      <service name="ROM"/>
+      <service name="RAM"/>
+      <service name="CAP"/>
+      <service name="PD"/>
+      <service name="RM"/>
+      <service name="CPU"/>
+      <service name="LOG"/>
+      <service name="SIGNAL"/>
+      <service name="Nitpicker" />
+      <service name="Timer" />
+    </parent-provides>
+    <default-route>
+      <any-service> <parent/> <any-child/> </any-service>
+    </default-route>
+
+    <start name="nit_fb">
+      <resource name="RAM" quantum="3M"/>
+      <provides> <service name="Framebuffer"/>
+                 <service name="Input"/> </provides>
+      <config width="800" height="600"/>
+      <route> <any-service> <parent/> </any-service> </route>
+    </start>
+
+    <start name="nitpicker">
+      <resource name="RAM" quantum="1M"/>
+      <provides><service name="Nitpicker"/></provides>
+      <config>
+        <domain name="pointer"   layer="1" xray="no" origin="pointer" />
+        <domain name="decorator" layer="2" xray="opaque" />
+        <domain name="default"   layer="2" />
+
+        <policy label="pointer"         domain="pointer"/>
+        <policy label=""                domain="default"/>
+        <policy label="wm -> decorator" domain="decorator"/>
+
+        <global-key name="KEY_SCROLLLOCK" operation="xray" />
+        <global-key name="KEY_SYSRQ"      operation="kill" />
+        <global-key name="KEY_PRINT"      operation="kill" />
+        <global-key name="KEY_F11"        operation="kill" />
+        <global-key name="KEY_F12"        operation="xray" />
+      </config>
+      <route> <any-service> <child name="nit_fb"/> <parent/> </any-service> </route>
+    </start>
+
+    <start name="pointer">
+      <resource name="RAM" quantum="1M"/>
+      <route>
+        <service name="Nitpicker"> <child name="nitpicker"/> </service>
+        <any-service> <parent/> <any-child/> </any-service>
+      </route>
+    </start>
+
+    <start name="wm" priority="-1">
+      <resource name="RAM" quantum="32M"/>
+      <provides><service name="Nitpicker"/></provides>
+      <route>
+        <any-service>
+          <child name="nitpicker"/> <parent/> <any-child/>
+        </any-service>
+      </route>
+    </start>
+
+    <start name="backdrop" priority="-1">
+      <resource name="RAM" quantum="4M"/>
+      <config>
+        <libc>
+          <vfs>
+            <rom name="genode_logo.png"/>
+            <rom name="grid.png"/>
+          </vfs>
+        </libc>
+        <fill color="#224433" />
+        <image png="grid.png"        tiled="yes" alpha="200" />
+        <image png="genode_logo.png" anchor="bottom_right" alpha="150"
+                                     xpos="-20" ypos="-20" />
+      </config>
+      <route>
+        <any-service> <child name="nitpicker"/> <parent/> <any-child/>
+        </any-service>
+      </route>
+    </start>
+
+    <start name="wm_backdrop" priority="-1">
+      <binary name="backdrop" />
+      <resource name="RAM" quantum="4M"/>
+      <config>
+        <libc>
+          <vfs>
+            <rom name="genode_logo.png"/>
+          </vfs>
+        </libc>
+        <fill color="#664455" />
+        <image png="genode_logo.png" scale="zoom" alpha="150" />
+        <image png="genode_logo.png" scale="fit" alpha="150" tiled="yes" />
+        <image png="genode_logo.png" />
+      </config>
+      <route>
+        <any-service> <child name="wm"/> <parent/> <any-child/>
+        </any-service>
+      </route>
+    </start>
+  </config>
+</subsystem>
