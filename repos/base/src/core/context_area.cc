@@ -28,7 +28,7 @@ using namespace Genode;
 /**
  * Pointer to dataspace used to hold core contexts
  */
-enum { MAX_CORE_CONTEXTS = 256 };
+enum { MAX_CORE_CONTEXTS = 256*2 };
 static Dataspace_component *context_ds[MAX_CORE_CONTEXTS];
 
 

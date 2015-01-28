@@ -258,9 +258,9 @@ namespace Genode {
 		 * Thread-context area configuration.
 		 */
 		static constexpr addr_t context_area_virtual_base() {
-			return 0xa0000000UL; }
+			return 0x90000000UL; }
 		static constexpr addr_t context_area_virtual_size() {
-			return 0x10000000UL; }
+			return 0x20000000UL; }
 
 		/**
 		 * Size of virtual address region holding the context of one thread
