@@ -2,11 +2,15 @@
 # Build
 #
 
-build  {
+set build_components  {
 	core init
 	drivers/timer
 	drivers/sd_card
 }
+
+lappend_if [have_spec platform_rpi] build_components drivers/platform
+
+build $build_components
 
 create_boot_directory
 
@@ -15,7 +19,7 @@ create_boot_directory
 # Config
 #
 
-install_config {
+set config {
 	<config>
 		<parent-provides>
 			<service name="ROM"/>
@@ -31,8 +35,16 @@ install_config {
 		</parent-provides>
 		<default-route>
 			<any-service> <parent/> <any-child/> </any-service>
-		</default-route>
+		</default-route>}
 
+append_if [expr [have_spec platform_arndale] || [have_spec platform_rpi]] config {
+		<start name="platform_drv">
+			<resource name="RAM" quantum="1M"/>
+			<provides> <service name="Regulator"/>
+			           <service name="Platform"/> </provides>
+		</start>}
+
+append config {
 		<start name="timer">
 			<resource name="RAM" quantum="1M"/>
 			<provides><service name="Timer"/></provides>
@@ -44,16 +56,22 @@ install_config {
 	</config>
 }
 
+install_config $config
+
 
 #
 # Boot modules
 #
 
-build_boot_image {
+set boot_modules {
 	core init
 	timer
 	sd_card_bench
 }
+
+lappend_if [have_spec platform_rpi] boot_modules platform_drv
+
+build_boot_image $boot_modules
 
 run_genode_until forever
 
