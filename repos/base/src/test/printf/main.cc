@@ -13,9 +13,13 @@
  */
 
 #include <base/printf.h>
+#include <base/snprintf.h>
 
 int main(int argc, char **argv)
 {
+	char buf[10];
+	Genode::snprintf(buf, sizeof(buf), "%-5d", 1);
+
 	Genode::printf("-1 = %d = %ld\n", -1, -1L);
 
 	return 0;
