@@ -35,7 +35,7 @@ class Genode::Page_slab : public Genode::Allocator
 
 		static constexpr unsigned MIN_SLABS       = 6;
 		static constexpr unsigned SLAB_SIZE       = get_page_size();
-		static constexpr unsigned SLABS_PER_BLOCK = 12;
+		static constexpr unsigned SLABS_PER_BLOCK = 10;
 		static constexpr unsigned ALIGN_LOG2      = get_page_size_log2();
 
 		/**
