@@ -16,7 +16,7 @@
 #include <base/capability.h>
 
 static volatile int    spinlock = SPINLOCK_UNLOCKED;
-static Genode::uint8_t ref_counter[1 << (sizeof(Kernel::capid_t)*8)];
+static Genode::uint8_t ref_counter[(1 << (sizeof(Kernel::capid_t)*8))/256];
 
 void Genode::Native_capability::_inc() const
 {
