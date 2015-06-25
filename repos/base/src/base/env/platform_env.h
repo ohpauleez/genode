@@ -90,7 +90,7 @@ class Genode::Platform_env : public Genode::Env, public Emergency_ram_reserve
 		Resources _resources;
 		Heap      _heap;
 
-		char _initial_heap_chunk[sizeof(addr_t) * 4096];
+		char _initial_heap_chunk[sizeof(addr_t) * 4096/32];
 
 		/*
 		 * Emergency RAM reserve
