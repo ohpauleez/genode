@@ -273,6 +273,8 @@ Session_capability Child::session(Parent::Service_name const &name,
 	if (!strcmp("Env::rm_session",  name.string())) return _rm;
 	if (!strcmp("Env::pd_session",  name.string())) return _pd;
 
+	PLOG("%s session: %s", name.string(), args.string());
+
 	/* filter session arguments according to the child policy */
 	strncpy(_args, args.string(), sizeof(_args));
 	_policy->filter_session_args(name.string(), _args, sizeof(_args));
