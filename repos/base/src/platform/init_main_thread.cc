@@ -29,7 +29,7 @@ namespace Genode { Rm_session * env_context_area_rm_session(); }
 
 void prepare_init_main_thread();
 
-enum { MAIN_THREAD_STACK_SIZE = 16UL * 1024 * sizeof(Genode::addr_t) };
+enum { MAIN_THREAD_STACK_SIZE = 1UL * 1024 * sizeof(Genode::addr_t) };
 
 /**
  * Satisfy crt0.s in static programs, LDSO overrides this symbol
