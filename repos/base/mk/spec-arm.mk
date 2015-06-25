@@ -11,4 +11,6 @@ SPECS += 32bit
 #
 CC_OPT += -Wno-psabi
 
+LD_MARCH += -z max-page-size=0x1000
+
 include $(call select_from_repositories,mk/spec-32bit.mk)
