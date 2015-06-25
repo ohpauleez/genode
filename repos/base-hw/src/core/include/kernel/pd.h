@@ -61,10 +61,10 @@ class Kernel::Mode_transition_control
 		typedef Genode::Translation_table    Table;
 		typedef Genode::Page_flags           Page_flags;
 
-		Allocator   _allocator;
 		Slab        _slab;
 		Table       _table;
 		Cpu_context _master;
+		Allocator   _allocator;
 
 		/**
 		 * Return size of the mode transition
