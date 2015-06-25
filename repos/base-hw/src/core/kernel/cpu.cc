@@ -289,7 +289,7 @@ Cpu_pool::Cpu_pool()
 /**
  * Enable kernel-entry assembly to get an exclusive stack for every CPU
  */
-enum { KERNEL_STACK_SIZE = 64 * 1024 };
+enum { KERNEL_STACK_SIZE = 4 * 1024 };
 Genode::size_t  kernel_stack_size = KERNEL_STACK_SIZE;
 Genode::uint8_t kernel_stack[NR_OF_CPUS][KERNEL_STACK_SIZE]
 __attribute__((aligned(16)));
