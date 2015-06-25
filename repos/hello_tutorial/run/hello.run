@@ -31,15 +31,15 @@ install_config {
 	</default-route>
 
 	<start name="hello_server">
-		<resource name="RAM" quantum="300K"/>
+		<resource name="RAM" quantum="240K"/>
 		<provides><service name="Hello"/></provides>
 	</start>
 	<start name="timer">
-		<resource name="RAM" quantum="320K"/>
+		<resource name="RAM" quantum="260K"/>
 		<provides><service name="Timer"/></provides>
 	</start>
 	<start name="hello_client">
-		<resource name="RAM" quantum="220K"/>
+		<resource name="RAM" quantum="240K"/>
 	</start>
 </config>}
 
