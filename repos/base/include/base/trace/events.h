@@ -33,11 +33,7 @@ struct Genode::Trace::Rpc_call
 	char        const *rpc_name;
 	Msgbuf_base const &msg;
 
-	Rpc_call(char const *rpc_name, Msgbuf_base const &msg)
-	: rpc_name(rpc_name), msg(msg)
-	{
-		Thread_base::trace(this);
-	}
+	Rpc_call(char const *rpc_name, Msgbuf_base const &msg);
 
 	size_t generate(Policy_module &policy, char *dst) const {
 		return policy.rpc_call(dst, rpc_name, msg); }
@@ -49,11 +45,7 @@ struct Genode::Trace::Rpc_returned
 	char        const *rpc_name;
 	Msgbuf_base const &msg;
 
-	Rpc_returned(char const *rpc_name, Msgbuf_base const &msg)
-	: rpc_name(rpc_name), msg(msg)
-	{
-		Thread_base::trace(this);
-	}
+	Rpc_returned(char const *rpc_name, Msgbuf_base const &msg);
 
 	size_t generate(Policy_module &policy, char *dst) const {
 		return policy.rpc_returned(dst, rpc_name, msg); }
@@ -64,12 +56,7 @@ struct Genode::Trace::Rpc_dispatch
 {
 	char const *rpc_name;
 
-	Rpc_dispatch(char const *rpc_name)
-	:
-		rpc_name(rpc_name)
-	{
-		Thread_base::trace(this);
-	}
+	Rpc_dispatch(char const *rpc_name);
 
 	size_t generate(Policy_module &policy, char *dst) const {
 		return policy.rpc_dispatch(dst, rpc_name); }
@@ -80,12 +67,7 @@ struct Genode::Trace::Rpc_reply
 {
 	char const *rpc_name;
 
-	Rpc_reply(char const *rpc_name)
-	:
-		rpc_name(rpc_name)
-	{
-		Thread_base::trace(this);
-	}
+	Rpc_reply(char const *rpc_name);
 
 	size_t generate(Policy_module &policy, char *dst) const {
 		return policy.rpc_reply(dst, rpc_name); }

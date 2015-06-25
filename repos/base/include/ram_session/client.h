@@ -23,24 +23,20 @@ namespace Genode { struct Ram_session_client; }
 
 struct Genode::Ram_session_client : Rpc_client<Ram_session>
 {
-	explicit Ram_session_client(Ram_session_capability session)
-	: Rpc_client<Ram_session>(session) { }
+	explicit Ram_session_client(Ram_session_capability session);
 
 	Ram_dataspace_capability alloc(size_t size,
-	                               Cache_attribute cached = CACHED) override {
-		return call<Rpc_alloc>(size, cached); }
+	                               Cache_attribute cached = CACHED) override;
 
-	void free(Ram_dataspace_capability ds) override { call<Rpc_free>(ds); }
+	void free(Ram_dataspace_capability ds) override;
 
-	int ref_account(Ram_session_capability ram_session) override {
-		return call<Rpc_ref_account>(ram_session); }
+	int ref_account(Ram_session_capability ram_session) override;
 
-	int transfer_quota(Ram_session_capability ram_session, size_t amount) override {
-		return call<Rpc_transfer_quota>(ram_session, amount); }
+	int transfer_quota(Ram_session_capability ram_session, size_t amount) override;
 
-	size_t quota() override { return call<Rpc_quota>(); }
+	size_t quota() override;
 
-	size_t used() override { return call<Rpc_used>(); }
+	size_t used() override;
 };
 
 #endif /* _INCLUDE__RAM_SESSION__CLIENT_H_ */

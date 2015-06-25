@@ -26,14 +26,7 @@ struct Genode::Lock : Cancelable_lock
 	 */
 	explicit Lock(State initial = UNLOCKED) : Cancelable_lock(initial) { }
 
-	void lock()
-	{
-		while (1)
-			try {
-				Cancelable_lock::lock();
-				return;
-			} catch (Blocking_canceled) { }
-	}
+	void lock();
 
 	/**
 	 * Lock guard

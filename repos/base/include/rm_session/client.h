@@ -22,36 +22,24 @@ namespace Genode { struct Rm_session_client; }
 
 struct Genode::Rm_session_client : Rpc_client<Rm_session>
 {
-	explicit Rm_session_client(Rm_session_capability session)
-	: Rpc_client<Rm_session>(session) { }
+	explicit Rm_session_client(Rm_session_capability session);
 
 	Local_addr attach(Dataspace_capability ds, size_t size = 0,
 	                  off_t offset = 0, bool use_local_addr = false,
 	                  Local_addr local_addr = (void *)0,
-	                  bool executable = false) override
-	{
-		return call<Rpc_attach>(ds, size, offset,
-		                        use_local_addr, local_addr,
-		                        executable);
-	}
+	                  bool executable = false) override;
 
-	void detach(Local_addr local_addr) override {
-		call<Rpc_detach>(local_addr); }
+	void detach(Local_addr local_addr) override;
 
-	Pager_capability add_client(Thread_capability thread) override {
-		return call<Rpc_add_client>(thread); }
+	Pager_capability add_client(Thread_capability thread) override;
 
-	void remove_client(Pager_capability pager) override {
-		call<Rpc_remove_client>(pager); }
+	void remove_client(Pager_capability pager) override;
 
-	void fault_handler(Signal_context_capability handler) override {
-		call<Rpc_fault_handler>(handler); }
+	void fault_handler(Signal_context_capability handler) override;
 
-	State state() override {
-		return call<Rpc_state>(); }
+	State state() override;
 
-	Dataspace_capability dataspace() override {
-		return call<Rpc_dataspace>(); }
+	Dataspace_capability dataspace() override;
 };
 
 #endif /* _INCLUDE__RM_SESSION__CLIENT_H_ */

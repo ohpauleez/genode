@@ -182,3 +182,17 @@ Cancelable_lock::Cancelable_lock(Cancelable_lock::State initial)
 		lock();
 }
 
+
+/**********
+ ** Lock **
+ **********/
+
+void Lock::lock()
+{
+	while (1) {
+		try {
+			Cancelable_lock::lock();
+			return;
+		} catch (Blocking_canceled) { }
+	}
+}

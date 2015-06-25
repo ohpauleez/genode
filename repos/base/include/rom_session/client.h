@@ -22,17 +22,13 @@ namespace Genode { struct Rom_session_client; }
 
 struct Genode::Rom_session_client : Rpc_client<Rom_session>
 {
-	explicit Rom_session_client(Rom_session_capability session)
-	: Rpc_client<Rom_session>(session) { }
+	explicit Rom_session_client(Rom_session_capability session);
 
-	Rom_dataspace_capability dataspace() override {
-		return call<Rpc_dataspace>(); }
+	Rom_dataspace_capability dataspace() override;
 
-	bool update() override {
-		return call<Rpc_update>(); }
+	bool update() override;
 
-	void sigh(Signal_context_capability cap) override {
-		call<Rpc_sigh>(cap); }
+	void sigh(Signal_context_capability cap) override;
 };
 
 #endif /* _INCLUDE__ROM_SESSION__CLIENT_H_ */

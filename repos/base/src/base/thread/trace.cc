@@ -20,6 +20,7 @@
 
 /* local includes */
 #include <trace/control.h>
+#include <base/trace/events.h>
 
 using namespace Genode;
 
@@ -241,3 +242,36 @@ Trace::Logger *Thread_base::_logger()
 	return logger;
 }
 
+
+/******************
+ ** Trace points **
+ ******************/
+
+Trace::Rpc_call::Rpc_call(char const *rpc_name, Msgbuf_base const &msg)
+: rpc_name(rpc_name), msg(msg)
+{
+	Thread_base::trace(this);
+}
+
+
+Trace::Rpc_returned::Rpc_returned(char const *rpc_name, Msgbuf_base const &msg)
+: rpc_name(rpc_name), msg(msg)
+{
+	Thread_base::trace(this);
+}
+
+
+Trace::Rpc_dispatch::Rpc_dispatch(char const *rpc_name)
+:
+	rpc_name(rpc_name)
+{
+	Thread_base::trace(this);
+}
+
+
+Trace::Rpc_reply::Rpc_reply(char const *rpc_name)
+:
+	rpc_name(rpc_name)
+{
+	Thread_base::trace(this);
+}
