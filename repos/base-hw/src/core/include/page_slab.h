@@ -35,7 +35,7 @@ class Genode::Page_slab : public Genode::Allocator
 
 		static constexpr unsigned MIN_SLABS       = 6;
 		static constexpr unsigned SLAB_SIZE       = get_page_size();
-		static constexpr unsigned SLABS_PER_BLOCK = 8 * sizeof(addr_t);
+		static constexpr unsigned SLABS_PER_BLOCK = 12;
 		static constexpr unsigned ALIGN_LOG2      = get_page_size_log2();
 
 		/**
@@ -43,12 +43,20 @@ class Genode::Page_slab : public Genode::Allocator
 		 */
 		struct Slab_block
 		{
+			struct Bit_allocator : Genode::Bit_allocator<32>
+			{
+				Bit_allocator()
+				{
+					_reserve(SLABS_PER_BLOCK, 32 - SLABS_PER_BLOCK);
+				}
+			};
+
 			uint8_t                        data[SLAB_SIZE*SLABS_PER_BLOCK];
-			Bit_allocator<SLABS_PER_BLOCK> indices;
+			Bit_allocator                  indices;
 			List_element<Slab_block>       list_elem;
 			size_t                         ref_counter;
 
-			Slab_block() : list_elem(this), ref_counter(0) {}
+			Slab_block() : list_elem(this), ref_counter(0) { }
 
 			/**
 			 * Alloc a free block
