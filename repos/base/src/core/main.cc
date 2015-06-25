@@ -141,8 +141,8 @@ class Core_child : public Child_policy
 		 ** Child-policy interface **
 		 ****************************/
 
-		void filter_session_args(const char *, char *args,
-					 Genode::size_t args_len)
+		void filter_session_args(const char *session, char *args,
+		                         Genode::size_t args_len)
 		{
 			using namespace Genode;
 
@@ -157,6 +157,10 @@ class Core_child : public Child_policy
 			                 label_buf);
 
 			Arg_string::set_arg(args, args_len, "label", value_buf);
+
+			/* let the dynamic linker obtain the binary of init */
+			if (strcmp(session, "ROM") == 0 && strcmp(label_buf, "binary") == 0)
+				Arg_string::set_arg(args, args_len, "filename", "init");
 		}
 
 
@@ -263,6 +267,14 @@ int main()
 	platform_add_local_services(e, &sliced_heap, &local_services);
 
 	PDBG("--- start init ---");
+
+	/* look for dynamic linker */
+	try {
+		static Rom_connection rom("ld.lib.so");
+		Process::dynamic_linker(rom.dataspace());
+	} catch (...) {
+		PERR("dynamic linker (ld.lib.so) is missing");
+	}
 
 	/* obtain ROM session with init binary */
 	Rom_session_capability init_rom_session_cap;
