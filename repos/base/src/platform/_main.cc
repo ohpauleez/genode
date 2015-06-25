@@ -32,7 +32,7 @@ using namespace Genode;
 
 extern int main(int argc, char **argv, char **envp);
 
-enum { ATEXIT_SIZE = 256 };
+enum { ATEXIT_SIZE = 32 };
 
 
 /***************
