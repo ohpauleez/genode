@@ -139,7 +139,7 @@ proc run_boot_dir {binaries} {
 		exit -1
 	}
 	clean_boot_modules
-	exec rm -rf "[run_dir]/genode"
+	#exec rm -rf "[run_dir]/genode"
 
 	# offer ELF image
 	set elf_img "[run_dir]/image.elf"
