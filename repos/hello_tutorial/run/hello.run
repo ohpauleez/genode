@@ -31,15 +31,15 @@ install_config {
 	</default-route>
 
 	<start name="hello_server">
-		<resource name="RAM" quantum="1M"/>
+		<resource name="RAM" quantum="300K"/>
 		<provides><service name="Hello"/></provides>
 	</start>
 	<start name="timer">
-		<resource name="RAM" quantum="1M"/>
+		<resource name="RAM" quantum="320K"/>
 		<provides><service name="Timer"/></provides>
 	</start>
 	<start name="hello_client">
-		<resource name="RAM" quantum="1M"/>
+		<resource name="RAM" quantum="220K"/>
 	</start>
 </config>}
 
@@ -47,7 +47,7 @@ install_config {
 # Boot image
 #
 
-build_boot_image { core init hello_client hello_server timer }
+build_boot_image { core init hello_client hello_server timer ld.lib.so }
 
 append qemu_args " -nographic "
 
