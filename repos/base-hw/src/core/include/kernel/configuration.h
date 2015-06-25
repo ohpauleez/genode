@@ -16,7 +16,7 @@
 
 namespace Kernel
 {
-	enum { DEFAULT_STACK_SIZE = 16 * 1024 };
+	enum { DEFAULT_STACK_SIZE = 4 * 1024 };
 
 	/* amount of priority bands amongst quota owners in CPU scheduling */
 	constexpr unsigned cpu_priorities = 4;
