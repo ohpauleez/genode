@@ -55,7 +55,7 @@
 
 	/* stack of the temporary initial environment */
 	.p2align 4
-	.space 32 * 1024
+	.space 4 * 1024
 	_stack_high:
 
 	/* initial value of the SP register */
