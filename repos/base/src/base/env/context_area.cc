@@ -29,7 +29,7 @@ struct Expanding_rm_connection : Connection<Rm_session>, Expanding_rm_session_cl
 	 */
 	Expanding_rm_connection(addr_t start = ~0UL, size_t size = 0) :
 		Connection<Rm_session>(
-			session("ram_quota=64K, start=0x%p, size=0x%zx",
+			session("ram_quota=16K, start=0x%p, size=0x%zx",
 			        start, size)),
 		Expanding_rm_session_client(cap()) { }
 };

@@ -22,7 +22,7 @@ namespace Genode { struct Ram_connection; }
 
 struct Genode::Ram_connection : Connection<Ram_session>, Ram_session_client
 {
-	enum { RAM_QUOTA = 64*1024 };
+	enum { RAM_QUOTA = 16*1024 };
 	/**
 	 * Constructor
 	 *

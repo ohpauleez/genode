@@ -286,7 +286,7 @@ int main()
 
 	/* create ram session for init and transfer some of our own quota */
 	Ram_session_capability init_ram_session_cap
-		= static_cap_cast<Ram_session>(ram_root.session("ram_quota=32K", Affinity()));
+		= static_cap_cast<Ram_session>(ram_root.session("ram_quota=16K", Affinity()));
 	Ram_session_client(init_ram_session_cap).ref_account(env()->ram_session_cap());
 
 	/* create CPU session for init and transfer all of the CPU quota to it */
@@ -303,7 +303,7 @@ int main()
 	/* transfer all left memory to init, but leave some memory left for core */
 	/* NOTE: exception objects thrown in core components are currently allocated on
 	         core's heap and not accounted by the component's meta data allocator */
-	Genode::size_t init_quota = platform()->ram_alloc()->avail() - 172*1024;
+	Genode::size_t init_quota = platform()->ram_alloc()->avail() - 32*1024;
 	env()->ram_session()->transfer_quota(init_ram_session_cap, init_quota);
 	PDBG("transferred %zu MB to init", init_quota / (1024*1024));
 
