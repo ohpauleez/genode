@@ -406,7 +406,7 @@ namespace Sd_card {
 			 * Extract capacity information from CSD register
 			 *
 			 * \throw  Detection_failed
-			 * \return capacity in 512-byte blocks
+			 * \return capacity in 512 KiB blocks
 			 */
 			size_t _sd_card_device_size(Csd const csd)
 			{
@@ -429,14 +429,22 @@ namespace Sd_card {
 					size_t const c_size_mult = Csd1::V1_c_size_mult::get(csd.csd1);
 					size_t const mult        = 1 << (c_size_mult + 2);
 					size_t const block_len   = 1 << read_bl_len;
-					size_t const capacity    = (c_size + 1)*mult*block_len;
 
-					return capacity;
+					size_t const capacity_blocks = (c_size + 1)*mult;
+					size_t const capacity_bytes  = capacity_blocks*block_len;
+					size_t const capacity_512KiB = capacity_bytes/(512*1024);
+
+					return capacity_512KiB;
 				}
 
-				if (Csd3::Version::get(csd.csd3) == Csd3::Version::HIGH_CAPACITY)
-					return ((Csd2::V2_device_size_hi::get(csd.csd2) << 16)
-				           | Csd1::V2_device_size_lo::get(csd.csd1)) + 1;
+				if (Csd3::Version::get(csd.csd3) == Csd3::Version::HIGH_CAPACITY) {
+
+					size_t const capacity_512KiB =
+						((Csd2::V2_device_size_hi::get(csd.csd2) << 16)
+						| Csd1::V2_device_size_lo::get(csd.csd1)) + 1;
+
+					return capacity_512KiB;
+				}
 
 				PERR("Could not detect SD-card capacity");
 				throw Detection_failed();
@@ -480,7 +488,10 @@ namespace Sd_card {
 					throw Detection_failed();
 				}
 
-				return Card_info(rca, _sd_card_device_size(csd) / 2);
+				size_t const capacity_512KiB = _sd_card_device_size(csd);
+				size_t const capacity_1MiB   = capacity_512KiB / 2;
+
+				return Card_info(rca, capacity_1MiB);
 			}
 
 			Card_info _detect_mmc()
