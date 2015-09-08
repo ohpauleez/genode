@@ -33,7 +33,7 @@ proc amt_reset_soap_eoi { } {
 	while { $exit_result != 0 } {
 		set try_again 0
 		set time_start [ clock seconds ]
-		spawn amttool [power_on_amt_host] reset
+		spawn amttool [power_on_amt_host] powercycle
 		expect {
 			"host"  { send "y\r"; }
 			eof     { puts "Error: amttool died unexpectedly"; exit -4 }
