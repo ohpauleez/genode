@@ -532,7 +532,7 @@ namespace Platform {
 				 * device and return its capability.
 				 */
 				try {
-					Device_component * dev = new (_device_slab) Device_component(config, config_space, _ep, this, msi_usage());
+					Device_component * dev = new (_device_slab) Device_component(config, config_space, _ep, this, &_md_alloc, msi_usage());
 
 					/* if more than one driver uses the device - warn about */
 					if (bdf_in_use.get(Device_config::MAX_BUSES * bus +

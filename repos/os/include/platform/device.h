@@ -13,6 +13,7 @@
 
 #pragma once
 
+#include <base/cache.h>
 #include <irq_session/capability.h>
 #include <io_mem_session/capability.h>
 
@@ -28,5 +29,7 @@ struct Platform::Abstract_device
 	/**
 	 * Get IO mem session capability of specified resource id
 	 */
-	virtual Genode::Io_mem_session_capability io_mem(Genode::uint8_t) = 0;
+	virtual Genode::Io_mem_session_capability io_mem(Genode::uint8_t,
+	                                                 Genode::Cache_attribute,
+	                                                 Genode::addr_t, Genode::size_t) = 0;
 };
