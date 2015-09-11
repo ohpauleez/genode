@@ -119,4 +119,10 @@ bool flush_delayed_work(struct delayed_work *dwork)
 	return false;
 }
 
+void *krealloc(const void *, size_t, gfp_t)
+{
+	TRACE_AND_STOP;
+	return NULL;
+}
+
 } /* extern "C" */

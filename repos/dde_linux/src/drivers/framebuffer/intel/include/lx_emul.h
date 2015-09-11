@@ -35,7 +35,36 @@ void atomic_set_mask(unsigned int mask, atomic_t *v);
 #include <lx_emul/barrier.h>
 #include <lx_emul/types.h>
 
+/************************
+ ** uapi/linux/types.h **
+ ************************/
+
 typedef __u16 __le16;
+typedef __u16 __be16;
+typedef __u32 __le32;
+typedef __u32 __be32;
+typedef __u64 __le64;
+typedef __u64 __be64;
+
+
+/********************
+ ** linux/printk.h **
+ ********************/
+
+/* needed by drm_edid.c */
+enum { DUMP_PREFIX_NONE, };
+
+void print_hex_dump(const char *level, const char *prefix_str,
+                    int prefix_type, int rowsize, int groupsize,
+                    const void *buf, size_t len, bool ascii);
+
+
+/*********************
+ ** uapi/linux/fb.h **
+ *********************/
+
+#define KHZ2PICOS(a) (1000000000UL/(a))
+
 
 
 /*******************
@@ -90,6 +119,9 @@ unsigned long find_first_zero_bit(const unsigned long *addr, unsigned long size)
 typedef unsigned long phys_addr_t;
 
 #include <lx_emul/string.h>
+
+void *memchr_inv(const void *s, int c, size_t n);
+
 #include <lx_emul/list.h>
 #include <lx_emul/kernel.h>
 
@@ -538,12 +570,21 @@ void *kzalloc(size_t size, gfp_t flags);
 void kfree(const void *);
 void *kcalloc(size_t n, size_t size, gfp_t flags);
 void *kmalloc(size_t size, gfp_t flags);
+void *krealloc(const void *, size_t, gfp_t);
 
 struct kmem_cache;
 struct kmem_cache *kmem_cache_create(const char *, size_t, size_t, unsigned long, void (*)(void *));
 void kmem_cache_destroy(struct kmem_cache *);
 void *kmem_cache_zalloc(struct kmem_cache *k, gfp_t flags);
 void  kmem_cache_free(struct kmem_cache *, void *);
+
+
+/**********************
+ ** linux/byteorder/ **
+ **********************/
+
+#include <lx_emul/byteorder.h>
+
 
 /**********************
  ** linux/highmem.h  **
@@ -666,23 +707,25 @@ struct i2c_algorithm;
 struct i2c_adapter {
 	void *algo_data;
 	struct module *owner;
-	unsigned int class;		  /* classes to allow probing for */
+	unsigned int class;
 	char name[48];
-	struct device dev;		/* the adapter device */
-	const struct i2c_algorithm *algo; /* the algorithm to access the bus */
+	struct device dev;
+	const struct i2c_algorithm *algo;
 };
 
 struct i2c_msg;
-
-#define I2C_CLASS_DDC		(1<<3)	/* DDC bus on graphics adapters */
-
-int i2c_add_adapter(struct i2c_adapter *);
-void i2c_del_adapter(struct i2c_adapter *);
 
 struct i2c_algorithm {
 	int (*master_xfer)(struct i2c_adapter *adap, struct i2c_msg *msgs, int num);
 	u32 (*functionality) (struct i2c_adapter *);
 };
+
+#define I2C_CLASS_DDC (1<<3) /* DDC bus on graphics adapters */
+
+int i2c_add_adapter(struct i2c_adapter *);
+void i2c_del_adapter(struct i2c_adapter *);
+int i2c_transfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num);
+
 
 
 /**************************
@@ -922,14 +965,57 @@ bool capable(int cap);
  ** linux/hdmi.h **
  ******************/
 
+#define HDMI_IEEE_OUI 0x000c03
+
 enum hdmi_infoframe_type { HDMI_INFOFRAME_TYPE_DUMMY };
 
 enum hdmi_picture_aspect {
-	HDMI_PICTURE_ASPECT_DUMMY
-//	HDMI_PICTURE_ASPECT_NONE,
-//	HDMI_PICTURE_ASPECT_4_3,
-//	HDMI_PICTURE_ASPECT_16_9,
+	HDMI_PICTURE_ASPECT_NONE,
+	HDMI_PICTURE_ASPECT_4_3,
+	HDMI_PICTURE_ASPECT_16_9,
 };
+
+enum hdmi_active_aspect {
+	HDMI_ACTIVE_ASPECT_16_9_TOP = 2,
+	HDMI_ACTIVE_ASPECT_14_9_TOP = 3,
+	HDMI_ACTIVE_ASPECT_16_9_CENTER = 4,
+	HDMI_ACTIVE_ASPECT_PICTURE = 8,
+	HDMI_ACTIVE_ASPECT_4_3 = 9,
+	HDMI_ACTIVE_ASPECT_16_9 = 10,
+	HDMI_ACTIVE_ASPECT_14_9 = 11,
+	HDMI_ACTIVE_ASPECT_4_3_SP_14_9 = 13,
+	HDMI_ACTIVE_ASPECT_16_9_SP_14_9 = 14,
+	HDMI_ACTIVE_ASPECT_16_9_SP_4_3 = 15,
+};
+
+enum hdmi_3d_structure {
+	HDMI_3D_STRUCTURE_INVALID = -1,
+	HDMI_3D_STRUCTURE_FRAME_PACKING = 0,
+	HDMI_3D_STRUCTURE_FIELD_ALTERNATIVE,
+	HDMI_3D_STRUCTURE_LINE_ALTERNATIVE,
+	HDMI_3D_STRUCTURE_SIDE_BY_SIDE_FULL,
+	HDMI_3D_STRUCTURE_L_DEPTH,
+	HDMI_3D_STRUCTURE_L_DEPTH_GFX_GFX_DEPTH,
+	HDMI_3D_STRUCTURE_TOP_AND_BOTTOM,
+	HDMI_3D_STRUCTURE_SIDE_BY_SIDE_HALF = 8,
+};
+
+struct hdmi_avi_infoframe {
+	int dummy;
+	enum hdmi_picture_aspect picture_aspect;
+	enum hdmi_active_aspect active_aspect;
+	unsigned char video_code;
+	unsigned char pixel_repeat;
+};
+
+struct hdmi_vendor_infoframe {
+	enum hdmi_infoframe_type type;
+	u8 vic;
+	enum hdmi_3d_structure s3d_struct;
+};
+
+int hdmi_avi_infoframe_init(struct hdmi_avi_infoframe *frame);
+int hdmi_vendor_infoframe_init(struct hdmi_vendor_infoframe *frame);
 
 
 /*************************

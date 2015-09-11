@@ -415,6 +415,8 @@ void mutex_lock_nest_lock(struct mutex *lock, struct mutex *)
  ** DRM implementation **
  ************************/
 
+unsigned int drm_debug = 1;
+
 
 extern "C" int drm_pci_init(struct drm_driver *driver, struct pci_driver *pdriver)
 {

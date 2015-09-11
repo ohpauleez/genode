@@ -41,6 +41,8 @@ extern "C" {
 #undef private
 #endif /* __cplusplus */
 
+extern unsigned int drm_debug;
+
 
 /*******************
  ** DRM constants **
@@ -135,6 +137,8 @@ enum { DRM_CALLED_FROM_VBLIRQ = 1 };
 #endif
 
 #define DRM_ARRAY_SIZE(x) ARRAY_SIZE(x)
+
+#define DRM_UT_KMS 0x04
 
 
 ///***************

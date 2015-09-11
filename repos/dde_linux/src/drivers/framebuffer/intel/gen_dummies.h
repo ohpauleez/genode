@@ -102,18 +102,6 @@ void dma_unmap_sg_attrs(struct device *dev, struct scatterlist *sg, int nents, e
 	TRACE_AND_STOP;
 }
 
-int drm_add_edid_modes(struct drm_connector *connector, struct edid *edid)
-{
-	TRACE_AND_STOP;
-	return -1;
-}
-
-int drm_av_sync_delay(struct drm_connector *connector, struct drm_display_mode *mode)
-{
-	TRACE_AND_STOP;
-	return -1;
-}
-
 void drm_calc_timestamping_constants(struct drm_crtc *crtc, const struct drm_display_mode *mode)
 {
 	TRACE_AND_STOP;
@@ -138,12 +126,6 @@ void drm_clflush_sg(struct sg_table *st)
 void drm_clflush_virt_range(char *addr, unsigned long length)
 {
 	TRACE_AND_STOP;
-}
-
-bool drm_detect_monitor_audio(struct edid *edid)
-{
-	TRACE_AND_STOP;
-	return -1;
 }
 
 bool drm_dp_channel_eq_ok(const u8 link_status[DP_LINK_STATUS_SIZE], int lane_count)
@@ -176,17 +158,6 @@ void drm_dp_link_train_channel_eq_delay(const u8 dpcd[DP_RECEIVER_CAP_SIZE])
 }
 
 void drm_dp_link_train_clock_recovery_delay(const u8 dpcd[DP_RECEIVER_CAP_SIZE])
-{
-	TRACE_AND_STOP;
-}
-
-struct edid *drm_edid_duplicate(const struct edid *edid)
-{
-	TRACE_AND_STOP;
-	return NULL;
-}
-
-void drm_edid_to_eld(struct drm_connector *connector, struct edid *edid)
 {
 	TRACE_AND_STOP;
 }
@@ -274,12 +245,6 @@ void drm_gem_vm_open(struct vm_area_struct *vma)
 	TRACE_AND_STOP;
 }
 
-struct edid *drm_get_edid(struct drm_connector *connector, struct i2c_adapter *adapter)
-{
-	TRACE_AND_STOP;
-	return NULL;
-}
-
 struct drm_local_map *drm_getsarea(struct drm_device *dev)
 {
 	TRACE_AND_STOP;
@@ -352,12 +317,6 @@ void drm_kms_helper_poll_init(struct drm_device *dev)
 	TRACE_AND_STOP;
 }
 
-u8 drm_match_cea_mode(const struct drm_display_mode *to_match)
-{
-	TRACE_AND_STOP;
-	return -1;
-}
-
 void drm_mode_copy(struct drm_display_mode *dst, const struct drm_display_mode *src)
 {
 	TRACE_AND_STOP;
@@ -419,12 +378,6 @@ void drm_prime_gem_destroy(struct drm_gem_object *obj, struct sg_table *sg)
 	TRACE_AND_STOP;
 }
 
-bool drm_probe_ddc(struct i2c_adapter *adapter)
-{
-	TRACE_AND_STOP;
-	return -1;
-}
-
 void drm_put_dev(struct drm_device *dev)
 {
 	TRACE_AND_STOP;
@@ -440,12 +393,6 @@ int drm_release(struct inode *inode, struct file *filp)
 {
 	TRACE_AND_STOP;
 	return -1;
-}
-
-struct drm_connector *drm_select_eld(struct drm_encoder *encoder, struct drm_display_mode *mode)
-{
-	TRACE_AND_STOP;
-	return NULL;
 }
 
 void drm_send_vblank_event(struct drm_device *dev, int crtc, struct drm_pending_vblank_event *e)
@@ -1525,3 +1472,62 @@ int acpi_lid_notifier_register(struct notifier_block *nb)
 	TRACE_AND_STOP;
 	return -1;
 }
+struct drm_display_mode *drm_cvt_mode(struct drm_device *dev, int hdisplay, int vdisplay, int vrefresh, bool reduced, bool interlaced, bool margins)
+{
+	TRACE_AND_STOP;
+	return NULL;
+}
+
+struct drm_display_mode *drm_gtf_mode(struct drm_device *dev, int hdisplay, int vdisplay, int vrefresh, bool interlaced, int margins)
+{
+	TRACE_AND_STOP;
+	return NULL;
+}
+
+struct drm_display_mode *drm_gtf_mode_complex(struct drm_device *dev, int hdisplay, int vdisplay, int vrefresh, bool interlaced, int margins, int GTF_M, int GTF_2C, int GTF_K, int GTF_2J)
+{
+	TRACE_AND_STOP;
+	return NULL;
+}
+
+bool drm_mode_equal_no_clocks_no_stereo(const struct drm_display_mode *mode1, const struct drm_display_mode *mode2)
+{
+	TRACE_AND_STOP;
+	return -1;
+}
+
+int drm_mode_hsync(const struct drm_display_mode *mode)
+{
+	TRACE_AND_STOP;
+	return -1;
+}
+
+int drm_mode_vrefresh(const struct drm_display_mode *mode)
+{
+	TRACE_AND_STOP;
+	return -1;
+}
+
+int i2c_transfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
+{
+	TRACE_AND_STOP;
+	return -1;
+}
+
+void *memchr_inv(const void *s, int c, size_t n)
+{
+	TRACE_AND_STOP;
+	return NULL;
+}
+
+void print_hex_dump(const char *level, const char *prefix_str, int prefix_type, int rowsize, int groupsize, const void *buf, size_t len, bool ascii)
+{
+	TRACE_AND_STOP;
+}
+
+int    strncmp(const char *cs, const char *ct, size_t count)
+{
+	TRACE_AND_STOP;
+	return -1;
+}
+
