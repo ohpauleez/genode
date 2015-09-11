@@ -540,11 +540,6 @@ unsigned long get_seconds(void)
 	return -1;
 }
 
-void i2c_del_adapter(struct i2c_adapter *)
-{
-	TRACE_AND_STOP;
-}
-
 void i915_capture_error_state(struct drm_device *dev)
 {
 	TRACE_AND_STOP;
@@ -1508,12 +1503,6 @@ int drm_mode_vrefresh(const struct drm_display_mode *mode)
 	return -1;
 }
 
-int i2c_transfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
-{
-	TRACE_AND_STOP;
-	return -1;
-}
-
 void *memchr_inv(const void *s, int c, size_t n)
 {
 	TRACE_AND_STOP;
@@ -1530,4 +1519,164 @@ int    strncmp(const char *cs, const char *ct, size_t count)
 	TRACE_AND_STOP;
 	return -1;
 }
+
+int acpi_device_uevent_modalias(struct device *, struct kobj_uevent_env *)
+{
+	TRACE_AND_STOP;
+	return -1;
+}
+
+int acpi_dev_pm_attach(struct device *dev, bool power_on)
+{
+	TRACE_AND_STOP;
+	return -1;
+}
+
+void acpi_dev_pm_detach(struct device *dev, bool power_off)
+{
+	TRACE_AND_STOP;
+}
+
+bool acpi_driver_match_device(struct device *dev, const struct device_driver *drv)
+{
+	TRACE_AND_STOP;
+	return -1;
+}
+
+int add_uevent_var(struct kobj_uevent_env *env, const char *format, ...)
+{
+	TRACE_AND_STOP;
+	return -1;
+}
+
+int bus_for_each_drv(struct bus_type *bus, struct device_driver *start, void *data, int (*fn)(struct device_driver *, void *))
+{
+	TRACE_AND_STOP;
+	return -1;
+}
+
+bool device_can_wakeup(struct device *dev)
+{
+	TRACE_AND_STOP;
+	return -1;
+}
+
+int device_for_each_child(struct device *dev, void *data, int (*fn)(struct device *dev, void *data))
+{
+	TRACE_AND_STOP;
+	return -1;
+}
+
+int device_init_wakeup(struct device *dev, bool val)
+{
+	TRACE_AND_STOP;
+	return -1;
+}
+
+const char *dev_name(const struct device *dev)
+{
+	TRACE_AND_STOP;
+	return NULL;
+}
+
+void gpio_free(unsigned gpio)
+{
+	TRACE_AND_STOP;
+}
+
+int gpio_get_value(unsigned int gpio)
+{
+	TRACE_AND_STOP;
+	return -1;
+}
+
+bool gpio_is_valid(int number)
+{
+	TRACE_AND_STOP;
+	return -1;
+}
+
+int gpio_request_one(unsigned gpio, unsigned long flags, const char *label)
+{
+	TRACE_AND_STOP;
+	return -1;
+}
+
+void gpio_set_value(unsigned int gpio, int value)
+{
+	TRACE_AND_STOP;
+}
+
+bool in_atomic()
+{
+	TRACE_AND_STOP;
+	return -1;
+}
+
+bool irqs_disabled()
+{
+	TRACE_AND_STOP;
+	return -1;
+}
+
+void ndelay(unsigned long)
+{
+	TRACE_AND_STOP;
+}
+
+int of_alias_get_id(struct device_node *np, const char *stem)
+{
+	TRACE_AND_STOP;
+	return -1;
+}
+
+int of_driver_match_device(struct device *dev, const struct device_driver *drv)
+{
+	TRACE_AND_STOP;
+	return -1;
+}
+
+void rt_mutex_lock(struct rt_mutex *lock)
+{
+	TRACE_AND_STOP;
+}
+
+int rt_mutex_trylock(struct rt_mutex *lock)
+{
+	TRACE_AND_STOP;
+	return -1;
+}
+
+void rt_mutex_unlock(struct rt_mutex *lock)
+{
+	TRACE_AND_STOP;
+}
+
+int    strcmp(const char *s1, const char *s2)
+{
+	TRACE_AND_STOP;
+	return -1;
+}
+
+size_t strlcpy(char *dest, const char *src, size_t size)
+{
+	TRACE_AND_STOP;
+	return -1;
+}
+
+void up_read(struct rw_semaphore *sem)
+{
+	TRACE_AND_STOP;
+}
+
+void wait_for_completion(struct completion *work) 
+{
+	TRACE_AND_STOP;
+}
+
+void bus_unregister(struct bus_type *bus)
+{
+	TRACE_AND_STOP;
+}
+
 

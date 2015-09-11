@@ -319,36 +319,6 @@ struct io_mapping *io_mapping_create_wc(resource_size_t base, unsigned long size
 }
 
 
-/**************************************
- ** drivers/i2c/algos/i2c-algo-bit.c **
- **************************************/
-
-static int bit_xfer(struct i2c_adapter *i2c_adap, struct i2c_msg msgs[], int num)
-{
-	TRACE_AND_STOP;
-	return -1;
-}
-
-static u32 bit_func(struct i2c_adapter *adap)
-{
-	TRACE_AND_STOP;
-	return 0;
-}
-
-
-const struct i2c_algorithm i2c_bit_algo = {
-	.master_xfer   = bit_xfer,
-	.functionality = bit_func,
-};
-
-
-int i2c_add_adapter(struct i2c_adapter *)
-{
-	TRACE;
-	return 0;
-}
-
-
 /****************
  ** linux/io.h **
  ****************/
@@ -361,6 +331,65 @@ int arch_phys_wc_add(unsigned long base, unsigned long size)
 	 * on top of a microkernel, we cannot manipulate the attributes
 	 * anyway.
 	 */
+	TRACE;
+	return 0;
+}
+
+
+/********************
+ ** linux/device.h **
+ ********************/
+
+struct subsys_private { int dummy; };
+
+int bus_register(struct bus_type *bus)
+{
+	/*
+	 * called by i2c-core init
+	 *
+	 * The subsequent code checks for the 'p' member of the 'bus'. So
+	 * we have to supply a valid pointer there.
+	 */
+
+	static subsys_private priv = { 0 };
+	bus->p = &priv;
+
+	TRACE;
+	return 0;
+}
+
+
+int driver_register(struct device_driver *drv)
+{
+	TRACE;
+	return 0;
+}
+
+
+int bus_for_each_dev(struct bus_type *bus, struct device *start, void *data,
+                     int (*fn)(struct device *dev, void *data))
+{
+	/*
+	 * Called bu the i2c-core driver after registering the driver. This
+	 * function is called to process drivers that are present at initialization
+	 * time. Since we initialize the i2c driver prior the others, we don't
+	 * need to perform anything.
+	 */
+	TRACE;
+	return 0;
+}
+
+
+int dev_set_name(struct device *dev, const char *name, ...)
+{
+	PDBG("name=%s", name);
+	TRACE;
+	return 0;
+}
+
+
+int device_register(struct device *dev)
+{
 	TRACE;
 	return 0;
 }

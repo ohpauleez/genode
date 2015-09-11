@@ -24,4 +24,4 @@ INC_DIR += $(SRC_DIR)/include \
            $(LIB_CACHE_DIR)/intel_fb_include
 
 CC_OPT += -U__linux__ -D__KERNEL__
-CC_OPT += -DCONFIG_DRM_I915_KMS
+CC_OPT += -DCONFIG_DRM_I915_KMS -DCONFIG_I2C -DCONFIG_I2C_BOARDINFO

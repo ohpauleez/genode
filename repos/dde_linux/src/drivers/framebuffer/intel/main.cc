@@ -22,9 +22,6 @@
 #include <lx_emul/impl/internal/pci_dev_registry.h>
 #include <lx_emul/impl/internal/pci_backend_alloc.h>
 
-/* provided by i915_drv.c */
-extern "C" int module_i915_init();
-
 
 namespace Server { struct Main; }
 
@@ -61,8 +58,15 @@ namespace Lx {
 };
 
 
+extern "C" int postcore_i2c_init(); /* i2c-core.c */
+extern "C" int module_i915_init();  /* i915_drv.c */
+
+
 static void run_linux(void *)
 {
+	PDBG("postcore_i915_init");
+	postcore_i2c_init();
+
 	PDBG("module_i915_init");
 	module_i915_init();
 

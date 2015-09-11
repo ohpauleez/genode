@@ -35,6 +35,9 @@ void atomic_set_mask(unsigned int mask, atomic_t *v);
 #include <lx_emul/barrier.h>
 #include <lx_emul/types.h>
 
+typedef unsigned long kernel_ulong_t;
+
+
 /************************
  ** uapi/linux/types.h **
  ************************/
@@ -129,12 +132,16 @@ typedef __kernel_time_t time_t;
 
 extern int oops_in_progress;
 
+#define pr_debug(fmt, ...)      printk(KERN_INFO pr_fmt(fmt), ##__VA_ARGS__)
 #define pr_info(fmt, ...)       printk(KERN_INFO pr_fmt(fmt), ##__VA_ARGS__)
 #define pr_err(fmt, ...)        printk(KERN_ERR pr_fmt(fmt), ##__VA_ARGS__)
+#define pr_warn(fmt, ...)       printk(KERN_ERR pr_fmt(fmt), ##__VA_ARGS__)
 #define pr_info_once(fmt, ...)  printk(KERN_INFO fmt, ##__VA_ARGS__)
 
 int sprintf(char *buf, const char *fmt, ...);
 int snprintf(char *buf, size_t size, const char *fmt, ...);
+
+int sscanf(const char *, const char *, ...);
 
 enum { SPRINTF_STR_LEN = 64 };
 
@@ -143,6 +150,9 @@ enum { SPRINTF_STR_LEN = 64 };
 	sprintf(buf, fmt, __VA_ARGS__); \
 	buf; \
 })
+
+/* linux/i2c.h */
+#define __deprecated
 
 
 /************************
@@ -168,6 +178,25 @@ extern void hex_dump_to_buffer(const void *buf, size_t len,
 #include <lx_emul/module.h>
 
 #define MODULE_ALIAS_MISCDEV(x)  /* needed by agp/backend.c */
+
+/* i2c-core.c */
+#define postcore_initcall(fn) void postcore_##fn(void) { fn(); }
+
+
+/**************************
+ ** linux/preempt_mask.h **
+ **************************/
+
+/* needed bu i2c-core.c */
+bool in_atomic();
+
+
+/**********************
+ ** linux/irqflags.h **
+ **********************/
+
+/* needed bu i2c-core.c */
+bool irqs_disabled();
 
 
 /*********************
@@ -197,6 +226,18 @@ static inline int mutex_lock_interruptible(struct mutex *lock) {
 
 void mutex_lock_nest_lock(struct mutex *, struct mutex *);
 
+
+/*********************
+ ** linux/rtmutex.h **
+ *********************/
+
+struct rt_mutex { int dummy; };
+
+void rt_mutex_lock(struct rt_mutex *lock);
+int rt_mutex_trylock(struct rt_mutex *lock);
+void rt_mutex_unlock(struct rt_mutex *lock);
+
+#define rt_mutex_init(mutex)
 
 
 /******************
@@ -272,6 +313,8 @@ extern struct task_struct *current;
 struct completion { unsigned done; };
 
 void __wait_completion(struct completion *work);
+void complete(struct completion *); /* i2c-core.c */
+void init_completion(struct completion *x);
 
 
 /*********************
@@ -313,6 +356,9 @@ void ida_destroy(struct ida *ida);
 void ida_init(struct ida *ida);
 int ida_simple_get(struct ida *ida, unsigned int start, unsigned int end, gfp_t gfp_mask);
 void ida_remove(struct ida *ida, int id);
+
+#define IDR_INIT(name) { .dummy = 0, }
+#define DEFINE_IDR(name)	struct idr name = IDR_INIT(name)
 
 
 /*************************
@@ -586,6 +632,13 @@ void  kmem_cache_free(struct kmem_cache *, void *);
 #include <lx_emul/byteorder.h>
 
 
+/******************
+ ** linux/swab.h **
+ ******************/
+
+#define swab16 __swab16
+
+
 /**********************
  ** linux/highmem.h  **
  **********************/
@@ -655,19 +708,102 @@ void pm_qos_add_request(struct pm_qos_request *req, int pm_qos_class, s32 value)
 #define PM_QOS_DEFAULT_VALUE -1
 
 
+/***********************
+ ** linux/pm_wakeup.h **
+ ***********************/
+
+bool device_can_wakeup(struct device *dev);
+int device_init_wakeup(struct device *dev, bool val);
+
+
+/*******************
+ ** linux/sysfs.h **
+ *******************/
+
+struct attribute { int dummy; };
+
+struct attribute_group {
+//	const char		*name;
+//	umode_t			(*is_visible)(struct kobject *,
+//					      struct attribute *, int);
+	struct attribute	**attrs;
+//	struct bin_attribute	**bin_attrs;
+};
+
+
+/****************
+ ** linux/pm.h **
+ ****************/
+
+#include <lx_emul/pm.h>
+
+enum {
+	PM_EVENT_QUIESCE = 0x0008,
+	PM_EVENT_PRETHAW = PM_EVENT_QUIESCE,
+};
+
+#define SET_RUNTIME_PM_OPS(suspend_fn, resume_fn, idle_fn)
+
+
 /********************
  ** linux/device.h **
  ********************/
 
-struct device {
-	struct device        *parent;
-	struct kobject        kobj;
-	u64                   _dma_mask_buf;
-	u64                  *dma_mask;
-	u64                   coherent_dma_mask;
-	struct device_driver *driver;
-	void                 *drvdata;  /* not in Linux */
+struct device_driver;
+struct subsys_private;
+
+struct bus_type
+{
+	const char *name;
+
+	int (*match)(struct device *dev, struct device_driver *drv);
+	int (*probe)(struct device *dev);
+	int (*remove)(struct device *dev);
+	void (*shutdown)(struct device *dev);
+	int (*suspend)(struct device *dev, pm_message_t state);
+	int (*resume)(struct device *dev);
+
+	const struct dev_pm_ops *pm;
+	struct subsys_private *p;
 };
+
+struct device_type
+{
+	const struct attribute_group **groups;
+	int (*uevent)(struct device *dev, struct kobj_uevent_env *env);
+	void (*release)(struct device *dev);
+};
+
+struct dev_archdata { int dummy; };
+
+struct device {
+	struct device            *parent;
+	struct kobject            kobj;
+	u64                       _dma_mask_buf;
+	u64                      *dma_mask;
+	u64                       coherent_dma_mask;
+	struct device_driver     *driver;
+	void                     *drvdata;  /* not in Linux */
+	const struct device_type *type;
+	void                     *platform_data;
+	struct dev_archdata       archdata;
+	struct bus_type          *bus;
+	struct device_node       *of_node;
+};
+
+struct device_attribute {
+	struct attribute attr;
+//	ssize_t (*show)(struct device *dev, struct device_attribute *attr,
+//			char *buf);
+//	ssize_t (*store)(struct device *dev, struct device_attribute *attr,
+//			 const char *buf, size_t count);
+};
+
+#define DEVICE_ATTR(_name, _mode, _show, _store) \
+	struct device_attribute dev_attr_##_name = { { 0 } }
+
+#define DEVICE_ATTR_IGNORE_LOCKDEP(_name, _mode, _show, _store) \
+	struct device_attribute dev_attr_##_name = { { 0 } }
 
 #define dev_info(  dev, format, arg...) lx_printf("dev_info: "   format , ## arg)
 #define dev_warn(  dev, format, arg...) lx_printf("dev_warn: "   format , ## arg)
@@ -678,13 +814,15 @@ struct device {
 
 #define dev_printk(level, dev, format, arg...) \
 	lx_printf("dev_printk: " format , ## arg)
+#define dev_dbg(dev, format, arg...) \
+	lx_printf("dev_dbg: " format, ## arg)
 
 struct device_driver
 {
 	int dummy;
 	char const      *name;
-//	struct bus_type *bus;
-//	struct module   *owner;
+	struct bus_type *bus;
+	struct module   *owner;
 //	const char      *mod_name;
 //	const struct of_device_id  *of_match_table;
 //	const struct acpi_device_id *acpi_match_table;
@@ -694,49 +832,35 @@ struct device_driver
 	const struct dev_pm_ops *pm;
 };
 
+int driver_register(struct device_driver *drv);
+void driver_unregister(struct device_driver *drv);
 
-/*****************
- ** linux/i2c.h **
- *****************/
+void *dev_get_drvdata(const struct device *dev);
+int dev_set_drvdata(struct device *dev, void *data);
+int dev_set_name(struct device *dev, const char *name, ...);
 
-#include <uapi/linux/i2c.h>
+int bus_register(struct bus_type *bus);
+void bus_unregister(struct bus_type *bus);
 
-struct module;
-struct i2c_algorithm;
+struct device *get_device(struct device *dev);
+void put_device(struct device *dev);
 
-struct i2c_adapter {
-	void *algo_data;
-	struct module *owner;
-	unsigned int class;
-	char name[48];
-	struct device dev;
-	const struct i2c_algorithm *algo;
-};
+int device_for_each_child(struct device *dev, void *data, int (*fn)(struct device *dev, void *data));
+int device_register(struct device *dev);
+void device_unregister(struct device *dev);
 
-struct i2c_msg;
+const char *dev_name(const struct device *dev);
 
-struct i2c_algorithm {
-	int (*master_xfer)(struct i2c_adapter *adap, struct i2c_msg *msgs, int num);
-	u32 (*functionality) (struct i2c_adapter *);
-};
+int bus_for_each_drv(struct bus_type *bus, struct device_driver *start,
+                     void *data, int (*fn)(struct device_driver *, void *));
 
-#define I2C_CLASS_DDC (1<<3) /* DDC bus on graphics adapters */
+int bus_for_each_dev(struct bus_type *bus, struct device *start, void *data,
+                     int (*fn)(struct device *dev, void *data));
 
-int i2c_add_adapter(struct i2c_adapter *);
-void i2c_del_adapter(struct i2c_adapter *);
-int i2c_transfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num);
+/* needed by linux/i2c.h */
+struct acpi_device;
 
-
-
-/**************************
- ** linux/i2c-algo-bit.h **
- **************************/
-
-/*
- * Needed by intel_lvds.c for requesting the EDID information for
- * LVDS-connected panels.
- */
-#include <linux/i2c-algo-bit.h>
+struct acpi_dev_node { struct acpi_device *companion; };
 
 
 /****************
@@ -833,12 +957,13 @@ int request_resource(struct resource *root, struct resource *); /* intel-gtt.c *
 
 int release_resource(struct resource *r);  /* i915_dma.c */
 
-#include <lx_emul/pm.h>
 
-enum {
-	PM_EVENT_QUIESCE = 0x0008,
-	PM_EVENT_PRETHAW = PM_EVENT_QUIESCE,
-};
+/************************
+ ** linux/pm_runtime.h **
+ ************************/
+
+int pm_generic_runtime_suspend(struct device *dev);
+int pm_generic_runtime_resume(struct device *dev);
 
 
 /*****************
@@ -863,11 +988,6 @@ struct pci_dev {
 	u8 pcie_cap;
 	u16 pcie_flags_reg;
 	unsigned int class;
-};
-
-struct bus_type
-{
-	int dummy;
 };
 
 struct pci_device_id {
@@ -1229,6 +1349,14 @@ extern int dmi_check_system(const struct dmi_system_id *list);
 #define DMI_MATCH(a, b)       { .slot = a, .substr = b }
 #define DMI_EXACT_MATCH(a, b) { .slot = a, .substr = b, .exact_match = 1 }
 
+#define I2C_MODULE_PREFIX "i2c:"
+#define I2C_NAME_SIZE 20
+
+struct i2c_device_id {
+	char name[I2C_NAME_SIZE];
+	kernel_ulong_t driver_data;	/* Data private to the driver */
+};
+
 /*********************
  ** asm/processor.h **
  *********************/
@@ -1253,6 +1381,75 @@ struct backlight_properties {
 struct backlight_device {
 	struct backlight_properties props;
 };
+
+
+/*****************
+ ** linux/i2c.h **
+ *****************/
+
+struct i2c_adapter;
+struct i2c_msg;
+
+#include <linux/i2c.h>
+
+
+
+/****************
+ ** linux/of.h **
+ ****************/
+
+int of_alias_get_id(struct device_node *np, const char *stem);
+
+
+/***********************
+ ** linux/of_device.h **
+ ***********************/
+
+int of_driver_match_device(struct device *dev, const struct device_driver *drv);
+
+
+/******************
+ ** linux/acpi.h **
+ ******************/
+
+struct kobject_uevent_env;
+
+bool acpi_driver_match_device(struct device *dev, const struct device_driver *drv);
+int acpi_device_uevent_modalias(struct device *, struct kobj_uevent_env *);
+
+int acpi_dev_pm_attach(struct device *dev, bool power_on);
+void acpi_dev_pm_detach(struct device *dev, bool power_off);
+
+int acpi_device_modalias(struct device *, char *, int);
+
+#define ACPI_COMPANION(dev)		(NULL)
+#define ACPI_COMPANION_SET(dev, adev)	do { } while (0)
+
+const char *acpi_dev_name(struct acpi_device *adev);
+
+
+/******************
+ ** linux/gpio.h **
+ ******************/
+
+/* make these flag values available regardless of GPIO kconfig options */
+#define GPIOF_DIR_OUT	(0 << 0)
+#define GPIOF_DIR_IN	(1 << 0)
+
+#define GPIOF_INIT_LOW	(0 << 1)
+#define GPIOF_INIT_HIGH	(1 << 1)
+
+#define GPIOF_IN		(GPIOF_DIR_IN)
+#define GPIOF_OUT_INIT_HIGH	(GPIOF_DIR_OUT | GPIOF_INIT_HIGH)
+
+#define GPIOF_OPEN_DRAIN	(1 << 3)
+
+/* needed bu drivers/i2c/i2c-core.c */
+int gpio_get_value(unsigned int gpio);
+void gpio_set_value(unsigned int gpio, int value);
+int gpio_request_one(unsigned gpio, unsigned long flags, const char *label);
+void gpio_free(unsigned gpio);
+bool gpio_is_valid(int number);
 
 
 /*******************

@@ -125,4 +125,15 @@ void *krealloc(const void *, size_t, gfp_t)
 	return NULL;
 }
 
+void down_read(struct rw_semaphore *sem)
+{
+	TRACE_AND_STOP;
+}
+
+void device_unregister(struct device *dev)
+{
+	TRACE_AND_STOP;
+}
+
+
 } /* extern "C" */
