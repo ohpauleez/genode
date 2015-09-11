@@ -21,7 +21,12 @@
 /* Linux emulation environment includes */
 #include <lx_emul/impl/internal/list.h>
 
-namespace Lx { class Mapped_io_mem_range; }
+namespace Lx {
+
+	class Mapped_io_mem_range;
+
+	void *ioremap(resource_size_t, unsigned long, Genode::Cache_attribute);
+}
 
 /**
  * Representation of a locally-mapped MMIO range
@@ -60,5 +65,48 @@ class Lx::Mapped_io_mem_range : public Lx::List<Mapped_io_mem_range>::Element
 			return (phys >= _phys) && (phys + size - 1 <= _phys + _size - 1);
 		}
 };
+
+
+void *Lx::ioremap(resource_size_t phys_addr, unsigned long size,
+                  Genode::Cache_attribute cache_attribute)
+{
+	using namespace Genode;
+
+	static Lx::List<Lx::Mapped_io_mem_range> ranges;
+
+	/* search for the requested region within the already mapped ranges */
+	for (Lx::Mapped_io_mem_range *r = ranges.first(); r; r = r->next()) {
+
+		if (r->contains(phys_addr, size)) {
+			void * const virt = (void *)(r->virt() + phys_addr - r->phys());
+			PLOG("ioremap: return sub range phys 0x%lx (size %lx) to virt 0x%lx",
+			     (long)phys_addr, (long)size, (long)virt);
+			return virt;
+		}
+	}
+
+	Io_mem_dataspace_capability ds_cap =
+		Lx::pci_dev_registry()->io_mem(phys_addr, cache_attribute, size);
+
+	if (!ds_cap.valid()) {
+
+		PERR("Failed to request I/O memory: [%zx,%lx)", phys_addr,
+		     phys_addr + size);
+		return nullptr;
+	}
+
+	Genode::size_t const ds_size = Genode::Dataspace_client(ds_cap).size();
+
+	Lx::Mapped_io_mem_range *io_mem =
+		new (env()->heap()) Lx::Mapped_io_mem_range(phys_addr, ds_size, ds_cap);
+
+	ranges.insert(io_mem);
+
+	PLOG("ioremap: mapped phys 0x%lx (size %lx) to virt 0x%lx",
+	     (long)phys_addr, (long)size, (long)io_mem->virt());
+
+	addr_t const sub_page_offset = phys_addr & 0xfff;
+	return (void *)(io_mem->virt() + sub_page_offset);
+}
 
 #endif /* _LX_EMUL__IMPL__INTERNAL__MAPPED_IO_MEM_RANGE_H_ */

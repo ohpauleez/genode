@@ -228,12 +228,6 @@ int pci_bus_alloc_resource(struct pci_bus *, struct resource *, resource_size_t,
 }
 
 
-void *ioremap_wc(resource_size_t phys_addr, unsigned long size)
-{
-	return ioremap(phys_addr, size);
-}
-
-
 void pci_set_master(struct pci_dev *dev)
 {
 	TRACE;

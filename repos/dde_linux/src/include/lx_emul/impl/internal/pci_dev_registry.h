@@ -50,7 +50,9 @@ class Lx::Pci_dev_registry
 			_devs.insert(pci_dev);
 		}
 
-		Genode::Io_mem_dataspace_capability io_mem(resource_size_t phys)
+		Genode::Io_mem_dataspace_capability io_mem(resource_size_t         phys,
+		                                           Genode::Cache_attribute cache_attribute,
+		                                           Genode::size_t          size)
 		{
 			enum { PCI_ROM_RESOURCE = 6 };
 
@@ -67,11 +69,15 @@ class Lx::Pci_dev_registry
 
 				Platform::Device &device = d->client();
 
-				unsigned resource_id =
+				unsigned const resource_id =
 					device.phys_bar_to_virt(bar);
 
+				/* offset from the beginning of the PCI resource */
+				Genode::addr_t const offset =
+					phys - pci_resource_start(d, bar);
+
 				Genode::Io_mem_session_capability io_mem_cap =
-					device.io_mem(resource_id);
+					device.io_mem(resource_id, cache_attribute, offset, size);
 
 				return Genode::Io_mem_session_client(io_mem_cap).dataspace();
 			}

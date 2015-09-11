@@ -14,6 +14,7 @@
 #include <io_mem_session/connection.h>
 
 #include <lx_emul/impl/internal/pci_dev_registry.h>
+#include <lx_emul/impl/internal/mapped_io_mem_range.h>
 
 
 extern void pci_dev_put(struct pci_dev *pci_dev)
@@ -106,30 +107,9 @@ extern "C" void *pci_ioremap_bar(struct pci_dev *dev, int bar)
 	if (bar >= DEVICE_COUNT_RESOURCE || bar < 0)
 		return 0;
 
-	size_t start = pci_resource_start(dev, bar);
-	size_t size  = pci_resource_len(dev, bar);
-
-	if (!start)
-		return 0;
-
-	Io_mem_session_client *io_mem;
-	try {
-		Platform::Device &client = static_cast<Lx::Pci_dev *>(dev)->client();
-		io_mem = new (env()->heap()) Io_mem_session_client(client.io_mem(client.phys_bar_to_virt(bar)));
-	} catch (...) {
-		PERR("Failed to request I/O memory: [%zx,%zx)", start, start + size);
-		return 0;
-	}
-
-	if (!io_mem->dataspace().valid()) {
-		PERR("I/O memory not accessible");
-		return 0;
-	}
-
-	addr_t map_addr = env()->rm_session()->attach(io_mem->dataspace());
-	map_addr |= start & 0xfff;
-
-	return (void*)map_addr;
+	return Lx::ioremap(pci_resource_start(dev, bar),
+	                   pci_resource_len(dev, bar),
+	                   Genode::UNCACHED);
 }
 
 
