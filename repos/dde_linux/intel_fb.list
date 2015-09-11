@@ -21,6 +21,8 @@ linux-3.14.5/drivers/gpu/drm/i915/intel_ringbuffer.h
 linux-3.14.5/drivers/gpu/drm/i915/intel_display.c
 linux-3.14.5/drivers/gpu/drm/i915/intel_panel.c
 linux-3.14.5/drivers/gpu/drm/i915/intel_uncore.c
+linux-3.14.5/drivers/gpu/drm/i915/intel_lvds.c
+linux-3.14.5/drivers/gpu/drm/i915/intel_i2c.c
 linux-3.14.5/include/asm-generic/atomic64.h
 linux-3.14.5/include/asm-generic/ioctl.h
 linux-3.14.5/include/asm-generic/getorder.h
@@ -34,6 +36,7 @@ linux-3.14.5/include/linux/agp_backend.h
 linux-3.14.5/include/linux/list.h
 linux-3.14.5/include/linux/log2.h
 linux-3.14.5/include/linux/pci_ids.h
+linux-3.14.5/include/linux/i2c-algo-bit.h
 linux-3.14.5/include/drm/intel-gtt.h
 linux-3.14.5/include/drm/i915_pciids.h
 linux-3.14.5/include/drm/i915_drm.h
@@ -45,6 +48,7 @@ linux-3.14.5/include/drm/drm_edid.h
 linux-3.14.5/include/uapi/drm/i915_drm.h
 linux-3.14.5/include/uapi/drm/drm.h
 linux-3.14.5/include/uapi/linux/pci_regs.h
+linux-3.14.5/include/uapi/linux/i2c.h
 linux-3.14.5/include/uapi/asm-generic/ioctl.h
 linux-3.14.5/include/uapi/drm/drm_fourcc.h
 linux-3.14.5/include/uapi/drm/drm_mode.h

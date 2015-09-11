@@ -261,14 +261,6 @@ void ndelay(unsigned long);
 void usleep_range(unsigned long min, unsigned long max); /* intel_dp.c */
 
 
-/**************************
- ** linux/i2c-algo-bit.h **
- **************************/
-
-/* needed by intel_drv.h */
-struct i2c_algo_bit_data { int dummy; };
-
-
 /*****************
  ** linux/idr.h **
  *****************/
@@ -666,7 +658,10 @@ struct device_driver
  ** linux/i2c.h **
  *****************/
 
+#include <uapi/linux/i2c.h>
+
 struct module;
+struct i2c_algorithm;
 
 struct i2c_adapter {
 	void *algo_data;
@@ -674,11 +669,31 @@ struct i2c_adapter {
 	unsigned int class;		  /* classes to allow probing for */
 	char name[48];
 	struct device dev;		/* the adapter device */
+	const struct i2c_algorithm *algo; /* the algorithm to access the bus */
 };
+
+struct i2c_msg;
 
 #define I2C_CLASS_DDC		(1<<3)	/* DDC bus on graphics adapters */
 
-extern void i2c_del_adapter(struct i2c_adapter *);
+int i2c_add_adapter(struct i2c_adapter *);
+void i2c_del_adapter(struct i2c_adapter *);
+
+struct i2c_algorithm {
+	int (*master_xfer)(struct i2c_adapter *adap, struct i2c_msg *msgs, int num);
+	u32 (*functionality) (struct i2c_adapter *);
+};
+
+
+/**************************
+ ** linux/i2c-algo-bit.h **
+ **************************/
+
+/*
+ * Needed by intel_lvds.c for requesting the EDID information for
+ * LVDS-connected panels.
+ */
+#include <linux/i2c-algo-bit.h>
 
 
 /****************
@@ -948,6 +963,30 @@ int vga_get_uninterruptible(struct pci_dev *pdev, unsigned int rsrc);
 void vga_put(struct pci_dev *pdev, unsigned int rsrc);
 
 
+/**********************
+ ** linux/notifier.h **
+ **********************/
+
+/* needed by intel_lvds.c */
+
+struct notifier_block;
+
+typedef int (*notifier_fn_t)(struct notifier_block *nb, unsigned long action, void *data);
+
+struct notifier_block { notifier_fn_t notifier_call; };
+
+enum { NOTIFY_OK = 0x0001 };
+
+
+/*******************
+ ** acpi/button.h **
+ *******************/
+
+int acpi_lid_open(void);
+int acpi_lid_notifier_register(struct notifier_block *nb);
+int acpi_lid_notifier_unregister(struct notifier_block *nb);
+
+
 /****************************
  ** linux/vga_switcheroo.h **
  ****************************/
@@ -1070,11 +1109,11 @@ enum dmi_field {
 //	DMI_BIOS_DATE,
 	DMI_SYS_VENDOR,
 	DMI_PRODUCT_NAME,
-//	DMI_PRODUCT_VERSION,
+	DMI_PRODUCT_VERSION,
 //	DMI_PRODUCT_SERIAL,
 //	DMI_PRODUCT_UUID,
-//	DMI_BOARD_VENDOR,
-//	DMI_BOARD_NAME,
+	DMI_BOARD_VENDOR,
+	DMI_BOARD_NAME,
 //	DMI_BOARD_VERSION,
 //	DMI_BOARD_SERIAL,
 //	DMI_BOARD_ASSET_TAG,
@@ -1101,8 +1140,8 @@ struct dmi_system_id {
 
 extern int dmi_check_system(const struct dmi_system_id *list);
 
-#define DMI_MATCH(a, b)	{ .slot = a, .substr = b }
-
+#define DMI_MATCH(a, b)       { .slot = a, .substr = b }
+#define DMI_EXACT_MATCH(a, b) { .slot = a, .substr = b, .exact_match = 1 }
 
 /*********************
  ** asm/processor.h **

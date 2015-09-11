@@ -122,6 +122,16 @@ int idr_alloc(struct idr *idp, void *ptr, int start, int end, gfp_t gfp_mask)
 }
 
 
+int ida_simple_get(struct ida *ida, unsigned int start, unsigned int end, gfp_t gfp_mask)
+{
+	/*
+	 * Called by drm_crtc.c: drm_connector_init to allocate a connector_type_id
+	 */
+	TRACE;
+	return 0;
+}
+
+
 
 /**********************
  ** asm/cacheflush.h **
@@ -309,6 +319,36 @@ struct io_mapping *io_mapping_create_wc(resource_size_t base, unsigned long size
 }
 
 
+/**************************************
+ ** drivers/i2c/algos/i2c-algo-bit.c **
+ **************************************/
+
+static int bit_xfer(struct i2c_adapter *i2c_adap, struct i2c_msg msgs[], int num)
+{
+	TRACE_AND_STOP;
+	return -1;
+}
+
+static u32 bit_func(struct i2c_adapter *adap)
+{
+	TRACE_AND_STOP;
+	return 0;
+}
+
+
+const struct i2c_algorithm i2c_bit_algo = {
+	.master_xfer   = bit_xfer,
+	.functionality = bit_func,
+};
+
+
+int i2c_add_adapter(struct i2c_adapter *)
+{
+	TRACE;
+	return 0;
+}
+
+
 /****************
  ** linux/io.h **
  ****************/
@@ -492,12 +532,6 @@ void pm_qos_add_request(struct pm_qos_request *req, int pm_qos_class, s32 value)
 void intel_disable_gt_powersave(struct drm_device *dev)
 {
 	TRACE;
-}
-
-int intel_setup_gmbus(struct drm_device *dev)
-{
-	TRACE;
-	return 0;
 }
 
 void intel_setup_bios(struct drm_device *dev)

@@ -833,11 +833,6 @@ void intel_hdmi_init_connector(struct intel_digital_port *intel_dig_port, struct
 	TRACE_AND_STOP;
 }
 
-void intel_i2c_reset(struct drm_device *dev)
-{
-	TRACE_AND_STOP;
-}
-
 int intel_init_blt_ring_buffer(struct drm_device *dev)
 {
 	TRACE_AND_STOP;
@@ -870,17 +865,6 @@ int intel_init_vebox_ring_buffer(struct drm_device *dev)
 {
 	TRACE_AND_STOP;
 	return -1;
-}
-
-bool intel_is_dual_link_lvds(struct drm_device *dev)
-{
-	TRACE_AND_STOP;
-	return -1;
-}
-
-void intel_lvds_init(struct drm_device *dev)
-{
-	TRACE_AND_STOP;
 }
 
 int intel_overlay_switch_off(struct intel_overlay *overlay)
@@ -1000,11 +984,6 @@ int intel_sprite_set_colorkey(struct drm_device *dev, void *data, struct drm_fil
 }
 
 void intel_suspend_hw(struct drm_device *dev)
-{
-	TRACE_AND_STOP;
-}
-
-void intel_teardown_gmbus(struct drm_device *dev)
 {
 	TRACE_AND_STOP;
 }
@@ -1503,12 +1482,6 @@ void ida_remove(struct ida *ida, int id)
 	TRACE_AND_STOP;
 }
 
-int ida_simple_get(struct ida *ida, unsigned int start, unsigned int end, gfp_t gfp_mask)
-{
-	TRACE_AND_STOP;
-	return -1;
-}
-
 void idr_destroy(struct idr *idp)
 {
 	TRACE_AND_STOP;
@@ -1530,3 +1503,25 @@ void kref_init(struct kref *kref)
 	TRACE_AND_STOP;
 }
 
+int acpi_lid_notifier_unregister(struct notifier_block *nb)
+{
+	TRACE_AND_STOP;
+	return -1;
+}
+
+int acpi_lid_open(void)
+{
+	TRACE_AND_STOP;
+	return -1;
+}
+
+void drm_mode_set_name(struct drm_display_mode *mode)
+{
+	TRACE_AND_STOP;
+}
+
+int acpi_lid_notifier_register(struct notifier_block *nb)
+{
+	TRACE_AND_STOP;
+	return -1;
+}
