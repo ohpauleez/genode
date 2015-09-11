@@ -27,6 +27,7 @@
 /* Linux emulation environment includes */
 #include <lx_emul/impl/internal/debug.h>
 #include <lx_emul/impl/internal/list.h>
+#include <lx_emul/impl/internal/io_port.h>
 
 namespace Lx {
 
@@ -51,6 +52,8 @@ class Lx::Pci_dev : public pci_dev, public Lx::List<Pci_dev>::Element
 		bool const verbose = true;
 
 		Platform::Device_client _client;
+
+		Io_port _io_port;
 
 		/* offset used in PCI config space */
 		enum Pci_config { IRQ = 0x3c, REV = 0x8, CMD = 0x4,
@@ -119,6 +122,15 @@ class Lx::Pci_dev : public pci_dev, public Lx::List<Pci_dev>::Element
 				PDBGV("this=%p base: %x size: %x type: %u",
 				     this, res.base(), res.size(), res.type());
 
+				/* request port I/O session */
+				if (res.type() == Device::Resource::IO) {
+					uint8_t const virt_bar = _client.phys_bar_to_virt(i);
+					_io_port.session(res.base(), res.size(), _client.io_port(virt_bar));
+					io = true;
+					PDBGV("I/O [%u-%u)",
+					       res.base(), res.base() + res.size());
+				}
+
 				/* request I/O memory (write combined) */
 				if (res.type() == Device::Resource::MEMORY)
 					PDBGV("I/O memory [%x-%x)", res.base(),
@@ -170,6 +182,8 @@ class Lx::Pci_dev : public pci_dev, public Lx::List<Pci_dev>::Element
 		}
 
 		Platform::Device &client() { return _client; }
+
+		Io_port &io_port() { return _io_port; }
 };
 
 

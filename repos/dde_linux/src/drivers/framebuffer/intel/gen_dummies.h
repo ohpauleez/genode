@@ -718,12 +718,6 @@ void ilk_wm_get_hw_state(struct drm_device *dev)
 	TRACE_AND_STOP;
 }
 
-u8  inb(u32 port)
-{
-	TRACE_AND_STOP;
-	return -1;
-}
-
 void intel_attach_broadcast_rgb_property(struct drm_connector *connector)
 {
 	TRACE_AND_STOP;
@@ -1111,12 +1105,7 @@ void mark_page_accessed(struct page *)
 	TRACE_AND_STOP;
 }
 
-void mdelay(unsigned long)
-{
-	TRACE_AND_STOP;
-}
-
-int    memcmp(const void *, const void *, size_t)
+int memcmp(const void *, const void *, size_t)
 {
 	TRACE_AND_STOP;
 	return -1;
@@ -1128,20 +1117,10 @@ void  *memset_io(void *s, int c, size_t n)
 	return NULL;
 }
 
-void msleep(unsigned int)
-{
-	TRACE_AND_STOP;
-}
-
 loff_t noop_llseek(struct file *file, loff_t offset, int whence)
 {
 	TRACE_AND_STOP;
 	return -1;
-}
-
-void outb(u8  value, u32 port)
-{
-	TRACE_AND_STOP;
 }
 
 dma_addr_t page_to_pfn(struct page *page)
@@ -1420,11 +1399,6 @@ bool timespec_valid(const struct timespec *ts)
 	return -1;
 }
 
-void udelay(unsigned long)
-{
-	TRACE_AND_STOP;
-}
-
 void unregister_shrinker(struct shrinker *)
 {
 	TRACE_AND_STOP;
@@ -1436,17 +1410,6 @@ void usleep_range(unsigned long min, unsigned long max)
 }
 
 void valleyview_set_rps(struct drm_device *dev, u8 val)
-{
-	TRACE_AND_STOP;
-}
-
-int vga_get_uninterruptible(struct pci_dev *pdev, unsigned int rsrc)
-{
-	TRACE_AND_STOP;
-	return -1;
-}
-
-void vga_put(struct pci_dev *pdev, unsigned int rsrc)
 {
 	TRACE_AND_STOP;
 }

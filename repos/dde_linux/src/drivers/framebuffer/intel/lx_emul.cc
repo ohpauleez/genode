@@ -66,6 +66,13 @@ int dmi_check_system(const struct dmi_system_id *list)
 }
 
 
+/*******************
+ ** linux/delay.h **
+ *******************/
+
+#include <lx_emul/impl/delay.h>
+
+
 /**********************
  ** Global variables **
  **********************/
@@ -216,6 +223,29 @@ struct pci_dev *pci_dev_get(struct pci_dev *dev)
 	TRACE;
 	return dev;
 };
+
+
+int vga_get_uninterruptible(struct pci_dev *pdev, unsigned int rsrc)
+{
+	/*
+	 * This function locks the VGA device. It is normally provided by the
+	 * VGA arbiter in the Linux kernel. We don't need this arbitration because
+	 * the platform-driver enforces the exclusive access to the VGA resources
+	 * by our driver.
+	 *
+	 * At the time when this function is called, the 'pci_dev' structure for
+	 * the VGA card was already requested. Hence, subsequent I/O accesses
+	 * should work.
+	 */
+	TRACE;
+	return 0;
+}
+
+
+void vga_put(struct pci_dev *pdev, unsigned int rsrc)
+{
+	TRACE;
+}
 
 
 int pci_bus_alloc_resource(struct pci_bus *, struct resource *, resource_size_t,

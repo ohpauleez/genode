@@ -14,13 +14,6 @@
 #ifndef _LX_EMUL__IMPL__INTERNAL__PCI_DEV_REGISTRY_H_
 #define _LX_EMUL__IMPL__INTERNAL__PCI_DEV_REGISTRY_H_
 
-///* Genode includes */
-//#include <base/object_pool.h>
-//#include <platform_session/connection.h>
-//#include <platform_device/client.h>
-//#include <io_mem_session/connection.h>
-//#include <os/attached_dataspace.h>
-
 /* Linux emulation environment includes */
 #include <lx_emul/impl/internal/pci_dev.h>
 
@@ -84,6 +77,34 @@ class Lx::Pci_dev_registry
 
 			PERR("Device using i/o memory of address %zx is unknown", phys);
 			return Genode::Io_mem_dataspace_capability();
+		}
+
+		template <typename T>
+		T io_read(unsigned port)
+		{
+			PDBG("io_read %u", port);
+			/* try I/O access on all PCI devices */
+			for (Pci_dev *d = _devs.first(); d; d = d->next()) {
+				T value = 0;
+				if (d->io_port().in<T>(port, &value))
+					return value;
+			}
+
+			PWRN("I/O port(%u) read failed", port);
+			return (T)~0;
+		}
+
+		template <typename T>
+		void io_write(unsigned port, T value)
+		{
+			PDBG("io_write %u", port);
+
+			/* try I/O access on all PCI devices, return on first success */
+			for (Pci_dev *d = _devs.first(); d; d = d->next())
+				if (d->io_port().out<T>(port, value))
+					return;
+
+			PWRN("I/O port(%u) write failed", port);
 		}
 };
 
