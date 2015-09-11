@@ -40,6 +40,7 @@ linux-3.14.5/include/drm/i915_drm.h
 linux-3.14.5/include/drm/drm_dp_helper.h
 linux-3.14.5/include/drm/drm_mm.h
 linux-3.14.5/include/drm/drm_crtc.h
+linux-3.14.5/include/drm/drm_crtc_helper.h
 linux-3.14.5/include/drm/drm_edid.h
 linux-3.14.5/include/uapi/drm/i915_drm.h
 linux-3.14.5/include/uapi/drm/drm.h

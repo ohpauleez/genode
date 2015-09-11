@@ -42,6 +42,30 @@ void lx_vprintf(char const *fmt, va_list va)
 int oops_in_progress;
 
 
+/********************
+ ** linux/string.h **
+ ********************/
+
+char *strncpy(char *dst, const char* src, size_t n)
+{
+	return Genode::strncpy(dst, src, n);
+}
+
+
+/*****************
+ ** linux/dmi.h **
+ *****************/
+
+int dmi_check_system(const struct dmi_system_id *list)
+{
+	TRACE;
+	/*
+	 * Is used to check for quirks of the platform.
+	 */
+	return 0;
+}
+
+
 /**********************
  ** Global variables **
  **********************/
@@ -79,6 +103,17 @@ void idr_init(struct idr *idp)
 {
 	TRACE;
 }
+
+
+int idr_alloc(struct idr *idp, void *ptr, int start, int end, gfp_t gfp_mask)
+{
+	TRACE;
+	/*
+	 * Called from i915_gem_context.c: create_hw_context()
+	 */
+	return 0;
+}
+
 
 
 /**********************
@@ -301,9 +336,14 @@ void __wait_completion(struct completion *work)
 }
 
 
-void mutex_lock_nest_lock(struct mutex *, struct mutex *)
+void mutex_lock_nest_lock(struct mutex *lock, struct mutex *)
 {
-	TRACE_AND_STOP;
+	TRACE;
+	/*
+	 * Called by drm_crtc.c: drm_modeset_lock_all, drm_crtc_init to
+	 * lock the crtc mutex.
+	 */
+	mutex_lock(lock);
 }
 
 
@@ -404,6 +444,11 @@ void intel_pm_setup(struct drm_device *dev)
 	TRACE;
 }
 
+void intel_init_pm(struct drm_device *dev)
+{
+	TRACE;
+}
+
 int intel_power_domains_init(struct drm_device *dev)
 {
 	TRACE;
@@ -460,6 +505,12 @@ int vga_client_register(struct pci_dev *pdev, void *cookie, void (*irq_set_state
 }
 
 int vga_switcheroo_register_client(struct pci_dev *dev, const struct vga_switcheroo_client_ops *ops, bool driver_power_control)
+{
+	TRACE;
+	return 0;
+}
+
+int intel_plane_init(struct drm_device *dev, enum pipe pipe, int plane)
 {
 	TRACE;
 	return 0;

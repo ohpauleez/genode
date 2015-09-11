@@ -33,6 +33,7 @@ extern "C" {
 #include <drm/i915_pciids.h>
 #include <drm/drm_mm.h>
 #include <drm/drm_crtc.h>
+#include <drm/drm_crtc_helper.h>
 
 #ifdef __cplusplus
 #undef virtual
@@ -465,21 +466,12 @@ struct drm_pending_vblank_event;
 struct drm_fb_helper { int dummy; };
 
 
-struct drm_connector_helper_funcs {
-	int (*get_modes)(struct drm_connector *connector);
-	enum drm_mode_status (*mode_valid)(struct drm_connector *connector,
-	                                   struct drm_display_mode *mode);
-	struct drm_encoder *(*best_encoder)(struct drm_connector *connector);
-};
-
 #include <drm/drm_dp_helper.h>
 
 
 /***************************
  ** drm/drm_crtc_helper.h **
  ***************************/
-
-enum mode_set_atomic { LEAVE_ATOMIC_MODE_SET, ENTER_ATOMIC_MODE_SET, };
 
 struct drm_pending_event {
 	struct drm_event *event;
@@ -495,12 +487,6 @@ struct drm_pending_vblank_event {
 	struct drm_pending_event base;
 //	int pipe;
 	struct drm_event_vblank event;
-};
-
-struct drm_crtc_helper_funcs {
-	int (*mode_set_base_atomic)(struct drm_crtc *crtc, struct drm_framebuffer *fb,
-	                            int x, int y, enum mode_set_atomic);
-	void (*load_lut)(struct drm_crtc *crtc);
 };
 
 
@@ -658,7 +644,6 @@ extern int drm_add_edid_modes(struct drm_connector *connector, struct edid *edid
 extern int drm_mode_connector_update_edid_property(struct drm_connector *connector, struct edid *edid);
 extern void drm_edid_to_eld(struct drm_connector *connector, struct edid *edid);
 extern int drm_connector_init(struct drm_device *dev, struct drm_connector *connector, const struct drm_connector_funcs *funcs, int connector_type);
-extern void drm_connector_helper_add(struct drm_connector *connector, const struct drm_connector_helper_funcs *funcs);
 extern int drm_sysfs_connector_add(struct drm_connector *connector);
 extern void drm_clflush_virt_range(char *addr, unsigned long length);
 extern void drm_vma_node_unmap(struct drm_vma_offset_node *node, struct address_space *file_mapping);

@@ -102,12 +102,6 @@ void dma_unmap_sg_attrs(struct device *dev, struct scatterlist *sg, int nents, e
 	TRACE_AND_STOP;
 }
 
-int dmi_check_system(const struct dmi_system_id *list)
-{
-	TRACE_AND_STOP;
-	return -1;
-}
-
 int drm_add_edid_modes(struct drm_connector *connector, struct edid *edid)
 {
 	TRACE_AND_STOP;
@@ -142,16 +136,6 @@ void drm_clflush_sg(struct sg_table *st)
 }
 
 void drm_clflush_virt_range(char *addr, unsigned long length)
-{
-	TRACE_AND_STOP;
-}
-
-void drm_connector_helper_add(struct drm_connector *connector, const struct drm_connector_helper_funcs *funcs)
-{
-	TRACE_AND_STOP;
-}
-
-void drm_crtc_helper_add(struct drm_crtc *crtc, const struct drm_crtc_helper_funcs *funcs)
 {
 	TRACE_AND_STOP;
 }
@@ -877,11 +861,6 @@ void intel_init_clock_gating(struct drm_device *dev)
 	TRACE_AND_STOP;
 }
 
-void intel_init_pm(struct drm_device *dev)
-{
-	TRACE_AND_STOP;
-}
-
 int intel_init_render_ring_buffer(struct drm_device *dev)
 {
 	TRACE_AND_STOP;
@@ -919,12 +898,6 @@ int intel_overlay_switch_off(struct intel_overlay *overlay)
 void intel_plane_disable(struct drm_plane *plane)
 {
 	TRACE_AND_STOP;
-}
-
-int intel_plane_init(struct drm_device *dev, enum pipe pipe, int plane)
-{
-	TRACE_AND_STOP;
-	return -1;
 }
 
 void intel_plane_restore(struct drm_plane *plane)
@@ -1429,12 +1402,6 @@ void spin_unlock_irq(spinlock_t *lock)
 	TRACE_AND_STOP;
 }
 
-char  *strncpy(char *, const char *, size_t)
-{
-	TRACE_AND_STOP;
-	return NULL;
-}
-
 unsigned long timespec_to_jiffies(const struct timespec *value)
 {
 	TRACE_AND_STOP;
@@ -1574,12 +1541,6 @@ void ida_remove(struct ida *ida, int id)
 }
 
 int ida_simple_get(struct ida *ida, unsigned int start, unsigned int end, gfp_t gfp_mask)
-{
-	TRACE_AND_STOP;
-	return -1;
-}
-
-int idr_alloc(struct idr *idp, void *ptr, int start, int end, gfp_t gfp_mask)
 {
 	TRACE_AND_STOP;
 	return -1;
