@@ -9,6 +9,7 @@ if {![have_spec linux]} {
 set build_components {
 	core init drivers/timer drivers/framebuffer
 	server/dynamic_rom server/report_rom server/nitpicker app/decorator
+	app/themed_decorator
 }
 
 build $build_components
@@ -37,6 +38,7 @@ append config {
 	</default-route>
 	<start name="fb_sdl">
 		<resource name="RAM" quantum="4M"/>
+		<config width="640" height="480"/>
 		<provides>
 			<service name="Input"/>
 			<service name="Framebuffer"/>
@@ -157,6 +159,14 @@ append config {
 	</start>
 	<start name="decorator">
 		<resource name="RAM" quantum="4M"/>
+		<binary name="themed_decorator"/>
+		<config>
+			<libc>
+				<vfs>
+					<tar name="plain_decorator_theme.tar" />
+				</vfs>
+			</libc>
+		</config>
 		<route>
 			<service name="ROM">
 				<if-arg key="label" value="pointer" />
@@ -180,6 +190,8 @@ install_config $config
 # generic modules
 set boot_modules {
 	core init timer dynamic_rom report_rom fb_sdl nitpicker decorator
+	ld.lib.so libpng.lib.so libc.lib.so libm.lib.so zlib.lib.so
+	themed_decorator plain_decorator_theme.tar
 }
 
 build_boot_image $boot_modules

@@ -14,6 +14,7 @@ set build_components {
 	test/nitpicker
 	app/backdrop
 	app/launchpad
+	app/themed_decorator
 	server/nit_fb
 }
 
@@ -160,11 +161,20 @@ append config {
 		</route>
 	</start>
 	<start name="decorator" priority="-1">
-		<binary name="decorator"/>
+		<binary name="themed_decorator"/>
 		<resource name="RAM" quantum="8M"/>
+		<config>
+			<libc>
+				<vfs>
+					<tar name="plain_decorator_theme.tar" />
+				</vfs>
+			</libc>
+		</config>
 		<route>
+			<service name="ROM" label="window_layout"> <child name="report_rom"/> </service>
+			<service name="ROM" label="pointer"> <child name="report_rom"/> </service>
 			<any-service>
-				<child name="wm"/> <child name="report_rom"/> <parent/> <any-child/>
+				<child name="wm"/> <parent/> <any-child/>
 			</any-service>
 		</route>
 	</start>
@@ -249,6 +259,7 @@ set boot_modules {
 	testnit launchpad nit_fb
 	ld.lib.so libpng.lib.so libc.lib.so libm.lib.so zlib.lib.so
 	genode_logo.png grid.png
+	themed_decorator plain_decorator_theme.tar
 }
 
 # platform-specific modules
