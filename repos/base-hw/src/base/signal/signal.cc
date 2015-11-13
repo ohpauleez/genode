@@ -209,24 +209,51 @@ void Signal_receiver::block_for_signal()
 	/* get signal */
 	Signal::Data *data = (Signal::Data *)Thread_base::myself()->utcb()->base();
 	Signal s(*data);
+	{
+		Lock::Guard contexts_guard(_contexts_lock);
+		/* look up the contexts for the pending signal */
+		for (List_element<Signal_context> *le = _contexts.first(); le; le = le->next()) {
+			Signal_context *context = le->object();
 
-	/* save signal data in context list */
-	s.context()->_curr_signal = *data;
-	_contexts.insert(&s.context()->_receiver_le);
+			if (context == s.context()) {
+				Lock::Guard lock_guard(context->_lock);
+				context->_pending = true;
+				/* save signal data in context list */
+				context->_curr_signal = *data;
+				break;
+			}
+		}
+	}
 }
 
 
 Signal Signal_receiver::pending_signal()
 {
-	List_element<Signal_context> *le = _contexts.first();
-	if (!le)
-		throw Signal_not_pending();
+	Lock::Guard contexts_guard(_contexts_lock);
 
-	/* remove from context list */
-	Signal_context *context = le->object();
-	_contexts.remove(le);
+	/* look up the contexts for the pending signal */
+	for (List_element<Signal_context> *le = _contexts.first(); le; le = le->next()) {
+		Signal_context *context = le->object();
 
-	return Signal(context->_curr_signal);
+		Lock::Guard lock_guard(context->_lock);
+
+		/* check if context has a pending signal */
+		if (!context->_pending)
+			continue;
+
+		context->_pending   = false;
+		Signal::Data result = context->_curr_signal;
+
+		/* invalidate current signal in context */
+		context->_curr_signal = Signal::Data(0, 0);
+
+		if (result.num == 0)
+			PWRN("returning signal with num == 0");
+
+		return Signal(result);
+	}
+
+	throw Signal_not_pending();
 }
 
 
