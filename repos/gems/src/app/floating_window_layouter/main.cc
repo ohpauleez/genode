@@ -383,6 +383,15 @@ struct Floating_window_layouter::Main
 		return nullptr;
 	}
 
+	Window const *lookup_window_by_id(unsigned id) const
+	{
+		for (Window const *w = windows.first(); w; w = w->next())
+			if (w->has_id(id))
+				return w;
+
+		return nullptr;
+	}
+
 
 	/**
 	 * Install handler for responding to window-list changes
@@ -445,6 +454,12 @@ struct Floating_window_layouter::Main
 	Point pointer_clicked;
 	Point pointer_last;
 	Point pointer_curr;
+
+	bool focused_window_is_maximized() const
+	{
+		Window const *w = lookup_window_by_id(focused_window_id);
+		return w && w->is_maximized();
+	}
 
 	void import_window_list(Xml_node);
 	void generate_window_layout_model();
@@ -549,9 +564,19 @@ void Floating_window_layouter::Main::import_window_list(Xml_node window_list_xml
 
 void Floating_window_layouter::Main::generate_window_layout_model()
 {
+	unsigned const exclusive_window_id =
+		focused_window_is_maximized() ? focused_window_id : 0;
+
 	Reporter::Xml_generator xml(window_layout_reporter, [&] ()
 	{
 		for (Window *w = windows.first(); w; w = w->next()) {
+
+			/*
+			 * In the presence of a focused maximized window, omit all other
+			 * windows from the layout.
+			 */
+			if (exclusive_window_id && w->id() != exclusive_window_id)
+				continue;
 
 			bool const is_hovered = w->has_id(hovered_window_id);
 			bool const is_focused = w->has_id(focused_window_id);
