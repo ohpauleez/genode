@@ -1,0 +1,250 @@
+#
+# Build
+#
+
+set build_components {
+	core init drivers/timer drivers/framebuffer drivers/input
+	server/dynamic_rom server/nitpicker server/report_rom
+	app/pointer app/menu_view
+	app/launcher test/nitpicker
+	server/nit_fader server/wm app/themed_decorator
+	app/floating_window_layouter server/nit_fb
+	app/backdrop
+}
+
+source ${genode_dir}/repos/base/run/platform_drv.inc
+append_platform_drv_build_components
+
+build $build_components
+
+create_boot_directory
+
+#
+# Generate config
+#
+
+append config {
+<config>
+	<parent-provides>
+		<service name="ROM"/>
+		<service name="CPU"/>
+		<service name="PD"/>
+		<service name="RAM"/>
+		<service name="RM"/>
+		<service name="LOG"/>
+		<service name="IRQ"/>
+		<service name="IO_MEM"/>
+		<service name="IO_PORT"/>
+		<service name="CAP"/>
+		<service name="SIGNAL"/>
+	</parent-provides>
+	<default-route>
+		<any-service> <parent/> <any-child/> </any-service>
+	</default-route>}
+
+append_if [have_spec sdl] config {
+	<start name="fb_sdl">
+		<resource name="RAM" quantum="4M"/>
+		<provides>
+			<service name="Input"/>
+			<service name="Framebuffer"/>
+		</provides>
+		<config width="640" height="480"/>
+	</start>}
+
+append_platform_drv_config
+
+append_if [have_spec framebuffer] config {
+	<start name="fb_drv">
+		<resource name="RAM" quantum="4M"/>
+		<provides><service name="Framebuffer"/></provides>
+		<config buffered="yes" />
+	</start>}
+
+append_if [have_spec ps2] config {
+	<start name="ps2_drv">
+		<resource name="RAM" quantum="1M"/>
+		<provides><service name="Input"/></provides>
+	</start>}
+
+append config {
+	<start name="timer">
+		<resource name="RAM" quantum="1M"/>
+		<provides><service name="Timer"/></provides>
+	</start>
+	<start name="nitpicker">
+		<resource name="RAM" quantum="1M"/>
+		<provides><service name="Nitpicker"/></provides>
+		<config>
+			<report focus="yes" />
+
+			<background color="#000000"/>
+
+			<domain name="pointer"   layer="1" content="client" label="no" origin="pointer" />
+			<domain name="panel"     layer="2" content="client" label="no" hover="always" focus="transient" />
+			<domain name="default"   layer="3" content="client" label="no" hover="always"
+			                         ypos="28" height="-28" />
+			<policy label="pointer"                       domain="pointer"/>
+			<policy label_prefix="wm -> launcher -> menu" domain="panel"/>
+			<policy                                       domain="default"/>
+
+			<global-key name="KEY_LEFTMETA"   label="wm -> launcher" />
+			<global-key name="KEY_F3"         label="wm -> launcher" />
+		</config>
+		<route>
+			<service name="Report"> <child name="report_rom"/> </service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+
+	<start name="pointer">
+		<resource name="RAM" quantum="1M"/>
+		<route>
+			<service name="Nitpicker"> <child name="nitpicker" /> </service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+
+	<start name="report_rom">
+		<resource name="RAM" quantum="1M"/>
+		<provides> <service name="Report"/> <service name="ROM"/> </provides>
+		<config verbose="no">
+			<rom>
+				<policy label="layouter -> window_list"    report="wm -> window_list"/>
+				<policy label="layouter -> focus_request"  report="wm -> focus_request" />
+				<policy label="decorator -> window_layout" report="layouter -> window_layout"/>
+				<policy label="wm -> resize_request"       report="layouter -> resize_request"/>
+				<policy label="layouter -> hover"          report="decorator -> hover"/>
+				<policy label="wm -> focus"                report="layouter -> focus"/>
+				<policy label="launcher -> focus"          report="nitpicker -> focus"/>
+			</rom>
+		</config>
+	</start>
+
+	<start name="wm">
+		<resource name="RAM" quantum="6M"/>
+		<provides>
+			<service name="Nitpicker"/>
+		</provides>
+		<config>
+			<policy label_prefix="decorator"        role="decorator"/>
+			<policy label_prefix="layouter"         role="layouter"/>
+			<policy label_prefix="launcher -> menu" role="direct"/>
+		</config>
+		<route>
+			<any-service>
+				<child name="nitpicker"/> <child name="report_rom"/> <parent/> <any-child/>
+			</any-service>
+		</route>
+	</start>
+
+	<start name="layouter">
+		<binary name="floating_window_layouter"/>
+		<resource name="RAM" quantum="4M"/>
+		<config>
+			<policy maximized="yes"/>
+		</config>
+		<route>
+			<any-service>
+				<child name="wm"/> <child name="report_rom"/> <parent/> <any-child/>
+			</any-service>
+		</route>
+	</start>
+
+	<start name="decorator">
+		<binary name="themed_decorator"/>
+		<resource name="RAM" quantum="8M"/>
+		<config>
+			<libc>
+				<vfs>
+					<dir name="theme">
+						<inline name="metadata">
+							<theme>
+								<aura  top="0" bottom="0" left="0" right="0"/>
+								<decor top="0" bottom="0" left="0" right="0"/>
+							</theme>
+						</inline>
+					</dir>
+				</vfs>
+			</libc>
+		</config>
+		<route>
+			<service name="Report"> <child name="report_rom"/> </service>
+			<service name="ROM" label="window_layout"> <child name="report_rom"/> </service>
+			<service name="ROM" label="pointer"> <child name="report_rom"/> </service>
+			<any-service>
+				<child name="wm"/> <parent/> <any-child/>
+			</any-service>
+		</route>
+	</start>
+
+	<start name="launcher">
+		<resource name="RAM" quantum="80M" />
+		<config focus_prefix="wm -> launcher -> ">
+			<subsystem name="scout" title="Scout">
+				<resource name="RAM" quantum="20M" />
+				<binary name="scout" />
+			</subsystem>
+			<subsystem name="scout2" title="Scoutx">
+				<resource name="RAM" quantum="20M" />
+				<binary name="scout" />
+			</subsystem>
+			<subsystem name="blue" title="Blue">
+				<resource name="RAM" quantum="4M"/>
+				<binary name="backdrop" />
+				<config>
+					<libc>
+						<vfs>
+						</vfs>
+					</libc>
+					<fill color="#000077" />
+				</config>
+			</subsystem>
+			<subsystem name="red" title="Red">
+				<resource name="RAM" quantum="4M"/>
+				<binary name="backdrop" />
+				<config>
+					<libc>
+						<vfs>
+						</vfs>
+					</libc>
+					<fill color="#770000" />
+				</config>
+			</subsystem>
+
+		</config>
+		<route>
+			<service name="ROM"> <if-arg key="label" value="focus"/>
+				<child name="report_rom" />
+			</service>
+			<any-service> <child name="wm"/> <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+</config>}
+
+install_config $config
+
+#
+# Boot modules
+#
+
+# generic modules
+set boot_modules {
+	core init timer dynamic_rom nitpicker pointer menu_view
+	ld.lib.so libpng.lib.so libc.lib.so libm.lib.so zlib.lib.so
+	menu_view_styles.tar
+	scout launchpad testnit
+	nit_fader report_rom launcher rom_filter xray_trigger
+	themed_decorator wm floating_window_layouter nit_fb backdrop
+}
+
+# platform-specific modules
+append_platform_drv_boot_modules
+
+lappend_if [have_spec linux]        boot_modules fb_sdl
+lappend_if [have_spec ps2]          boot_modules ps2_drv
+lappend_if [have_spec framebuffer]  boot_modules fb_drv
+
+build_boot_image $boot_modules
+
+run_genode_until forever
