@@ -31,6 +31,8 @@
 #include <cap_session_component.h>
 #include <ram_session_component.h>
 
+namespace Genode { void init_context_area(); }
+
 namespace Genode {
 
 	/**
@@ -117,6 +119,14 @@ namespace Genode {
 
 			Core_parent                  _core_parent;
 			Cap_session_component        _cap_session;
+
+			/*
+			 * Initialize the context area before creating the first thread,
+			 * which happens to be the '_entrypoint'.
+			 */
+			bool _init_context_area() { init_context_area(); return true; }
+			bool _context_area_initialized = _init_context_area();
+
 			Rpc_entrypoint               _entrypoint;
 			Core_rm_session              _rm_session;
 			Core_ram_session             _ram_session;
@@ -137,14 +147,15 @@ namespace Genode {
 				             "ram_quota=4M", platform()->ram_alloc()->avail()),
 				_heap(&_ram_session, &_rm_session),
 				_ram_session_cap(_entrypoint.manage(&_ram_session))
-			{ }
+			{ 
+				PDBG("constructed");
+			}
 
 			/**
 			 * Destructor
 			 */
 			~Core_env() { parent()->exit(0); }
 
-			Cap_session    *cap_session() { return &_cap_session; }
 			Rpc_entrypoint *entrypoint()  { return &_entrypoint; }
 
 
@@ -152,32 +163,41 @@ namespace Genode {
 			 ** Env interface **
 			 *******************/
 
-			Parent                 *parent()          { return &_core_parent; }
-			Ram_session            *ram_session()     { return &_ram_session; }
-			Ram_session_capability  ram_session_cap() { return  _ram_session_cap; }
-			Rm_session             *rm_session()      { return &_rm_session; }
-			Allocator              *heap()            { return &_heap; }
+			Parent                 *parent()          override { return &_core_parent; }
+			Ram_session            *ram_session()     override { return &_ram_session; }
+			Ram_session_capability  ram_session_cap() override { return  _ram_session_cap; }
+			Rm_session             *rm_session()      override { return &_rm_session; }
+			Cap_session            *cap_session()     override { return &_cap_session; }
+			Signal_session         *signal_session()  override { return nullptr; }
+			Allocator              *heap()            override { return &_heap; }
 
-			Cpu_session *cpu_session()
+			Cpu_session *cpu_session() override
 			{
 				PWRN("%s:%u not implemented", __FILE__, __LINE__);
 				return 0;
 			}
 
-			Cpu_session_capability cpu_session_cap() {
+			Cpu_session_capability cpu_session_cap() override
+			{
 				PWRN("%s:%u not implemented", __FILE__, __LINE__);
 				return Cpu_session_capability();
 			}
 
-			Pd_session *pd_session()
+			Signal_session_capability signal_session_cap() override
+			{
+				PWRN("%s:%u not implemented", __FILE__, __LINE__);
+				return Signal_session_capability();
+			}
+
+			Pd_session *pd_session() override
 			{
 				PWRN("%s:%u not implemented", __FILE__, __LINE__);
 				return 0;
 			}
 
-			void reinit(Capability<Parent>::Dst, long) { }
+			void reinit(Capability<Parent>::Dst, long) override { }
 
-			void reinit_main_thread(Rm_session_capability &) { }
+			void reinit_main_thread(Rm_session_capability &) override { }
 	};
 
 

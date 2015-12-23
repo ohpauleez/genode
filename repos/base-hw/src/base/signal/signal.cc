@@ -21,11 +21,23 @@
 
 using namespace Genode;
 
+
+namespace Genode {
+
+	/*
+	 * On base-hw, no signal thread is needed.
+	 */
+	void init_signal_thread() __attribute__((weak));
+	void init_signal_thread() { }
+}
+
+
 /********************
  ** Signal context **
  ********************/
 
 void Signal_context::submit(unsigned) { PERR("not implemented"); }
+
 
 /************************
  ** Signal transmitter **
@@ -48,10 +60,9 @@ Signal_receiver::Signal_receiver()
 {
 	/* create a kernel object that corresponds to the receiver */
 	bool session_upgraded = 0;
-	Signal_connection * const s = signal_connection();
 	while (1) {
 		try {
-			_cap = s->alloc_receiver();
+			_cap = env()->signal_session()->alloc_receiver();
 			return;
 		} catch (Signal_session::Out_of_metadata)
 		{
@@ -62,7 +73,7 @@ Signal_receiver::Signal_receiver()
 				return;
 			}
 			PINF("upgrading quota donation for SIGNAL session");
-			env()->parent()->upgrade(s->cap(), "ram_quota=8K");
+			env()->parent()->upgrade(env()->signal_session_cap(), "ram_quota=8K");
 			session_upgraded = 1;
 		}
 	}
@@ -72,7 +83,7 @@ Signal_receiver::Signal_receiver()
 void Signal_receiver::_platform_destructor()
 {
 	/* release server resources of receiver */
-	signal_connection()->free_receiver(_cap);
+	env()->signal_session()->free_receiver(_cap);
 }
 
 
@@ -93,10 +104,9 @@ Signal_context_capability Signal_receiver::manage(Signal_context * const c)
 
 	/* create a context kernel-object at the receiver kernel-object */
 	bool session_upgraded = 0;
-	Signal_connection * const s = signal_connection();
 	while (1) {
 		try {
-			c->_cap = s->alloc_context(_cap, (unsigned long)c);
+			c->_cap = env()->signal_session()->alloc_context(_cap, (unsigned long)c);
 			c->_receiver = this;
 			_contexts.insert(&c->_receiver_le);
 			return c->_cap;
@@ -108,7 +118,7 @@ Signal_context_capability Signal_receiver::manage(Signal_context * const c)
 				return Signal_context_capability();
 			}
 			PINF("upgrading quota donation for signal session");
-			env()->parent()->upgrade(s->cap(), "ram_quota=8K");
+			env()->parent()->upgrade(env()->signal_session_cap(), "ram_quota=8K");
 			session_upgraded = 1;
 		}
 	}

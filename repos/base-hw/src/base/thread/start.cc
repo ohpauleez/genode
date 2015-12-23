@@ -20,7 +20,7 @@
 
 using namespace Genode;
 
-namespace Genode { Rm_session * env_context_area_rm_session(); }
+namespace Genode { extern Rm_session * const env_context_area_rm_session; }
 
 namespace Hw {
 	extern Ram_dataspace_capability _main_thread_utcb_ds;
@@ -47,7 +47,7 @@ void Thread_base::_init_platform_thread(size_t weight, Type type)
 	size_t const utcb_size = sizeof(Native_utcb);
 	addr_t const context_area = Native_config::context_area_virtual_base();
 	addr_t const utcb_new = (addr_t)&_context->utcb - context_area;
-	Rm_session * const rm = env_context_area_rm_session();
+	Rm_session * const rm = env_context_area_rm_session;
 	if (type == REINITIALIZED_MAIN) { rm->detach(utcb_new); }
 
 	/* remap initial main-thread UTCB according to context-area spec */
@@ -74,7 +74,7 @@ void Thread_base::_deinit_platform_thread()
 	addr_t utcb = Context_allocator::addr_to_base(_context) +
 	              Native_config::context_virtual_size() - size -
 	              Native_config::context_area_virtual_base();
-	env_context_area_rm_session()->detach(utcb);
+	env_context_area_rm_session->detach(utcb);
 
 	if (_pager_cap.valid()) {
 		env()->rm_session()->remove_client(_pager_cap);
@@ -98,7 +98,7 @@ void Thread_base::start()
 		addr_t dst = Context_allocator::addr_to_base(_context) +
 		             Native_config::context_virtual_size() - size -
 		             Native_config::context_area_virtual_base();
-		env_context_area_rm_session()->attach_at(ds, dst, size);
+		env_context_area_rm_session->attach_at(ds, dst, size);
 	} catch (...) {
 		PERR("failed to attach userland thread-context");
 		sleep_forever();

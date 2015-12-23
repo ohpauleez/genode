@@ -24,6 +24,16 @@
 #include <map_local.h>
 #include <dataspace_component.h>
 
+
+namespace Genode {
+
+	Rm_session  *env_context_area_rm_session;
+	Ram_session *env_context_area_ram_session;
+
+	void init_context_area();
+}
+
+
 using namespace Genode;
 
 
@@ -149,20 +159,11 @@ class Context_area_ram_session : public Ram_session
 };
 
 
-/**
- * Return single instance of the context-area RM and RAM session
- */
-namespace Genode {
+void Genode::init_context_area()
+{
+	static Context_area_rm_session rm;
+	env_context_area_rm_session = &rm;
 
-	Rm_session *env_context_area_rm_session()
-	{
-		static Context_area_rm_session inst;
-		return &inst;
-	}
-
-	Ram_session *env_context_area_ram_session()
-	{
-		static Context_area_ram_session inst;
-		return &inst;
-	}
+	static Context_area_ram_session ram;
+	env_context_area_ram_session = &ram;
 }

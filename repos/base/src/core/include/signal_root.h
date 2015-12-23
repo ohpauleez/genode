@@ -22,7 +22,7 @@
 
 namespace Genode {
 
-	class Signal_handler
+	class Signal_handler_ep
 	{
 		private:
 
@@ -31,7 +31,7 @@ namespace Genode {
 
 		public:
 
-			Signal_handler(Cap_session *cap_session) :
+			Signal_handler_ep(Cap_session *cap_session) :
 				_ep(cap_session, STACK_SIZE, "signal")
 			{ }
 
@@ -39,7 +39,7 @@ namespace Genode {
 	};
 
 
-	class Signal_root : private Signal_handler,
+	class Signal_root : private Signal_handler_ep,
 	                    public Root_component<Signal_session_component>
 	{
 		protected:
@@ -67,7 +67,7 @@ namespace Genode {
 			 */
 			Signal_root(Allocator *md_alloc, Cap_session *cap_session)
 			:
-				Signal_handler(cap_session),
+				Signal_handler_ep(cap_session),
 				Root_component<Signal_session_component>(entrypoint(), md_alloc)
 			{ }
 	};

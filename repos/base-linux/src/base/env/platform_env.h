@@ -26,6 +26,8 @@
 #include <base/local_capability.h>
 #include <base/heap.h>
 #include <linux_cpu_session/client.h>
+#include <cap_session/connection.h>
+#include <signal_session/connection.h>
 
 /* local includes (from 'base/src/base/env/') */
 #include <platform_env_common.h>
@@ -314,10 +316,6 @@ namespace Genode {
 
 		private:
 
-			/*******************************
-			 ** Platform-specific members **
-			 *******************************/
-
 			Ram_session_capability       _ram_session_cap;
 			Expanding_ram_session_client _ram_session_client;
 			Cpu_session_capability       _cpu_session_cap;
@@ -347,19 +345,19 @@ namespace Genode {
 			 ** Env interface **
 			 *******************/
 
-			Ram_session            *ram_session()     { return &_ram_session_client; }
-			Ram_session_capability  ram_session_cap() { return  _ram_session_cap; }
-			Rm_session             *rm_session()      { return &_rm_session_mmap; }
-			Linux_cpu_session      *cpu_session()     { return &_cpu_session_client; }
-			Cpu_session_capability  cpu_session_cap() { return  _cpu_session_cap; }
-			Pd_session             *pd_session()      { return &_pd_session_client; }
+			Ram_session            *ram_session()     override { return &_ram_session_client; }
+			Ram_session_capability  ram_session_cap() override { return  _ram_session_cap; }
+			Rm_session             *rm_session()      override { return &_rm_session_mmap; }
+			Linux_cpu_session      *cpu_session()     override { return &_cpu_session_client; }
+			Cpu_session_capability  cpu_session_cap() override { return  _cpu_session_cap; }
+			Pd_session             *pd_session()      override { return &_pd_session_client; }
 
 			/*
 			 * Support functions for implementing fork on Noux.
 			 *
 			 * Not supported on Linux.
 			 */
-			void reinit(Native_capability::Dst, long) { };
+			void reinit(Native_capability::Dst, long) override { };
 			void reinit_main_thread(Rm_session_capability &) { };
 	};
 
@@ -385,6 +383,10 @@ namespace Genode {
 			 */
 			class Local_parent : public Expanding_parent_client
 			{
+				private:
+
+					Allocator &_alloc;
+
 				public:
 
 					/**********************
@@ -404,7 +406,8 @@ namespace Genode {
 					 *                    services
 					 */
 					Local_parent(Parent_capability parent_cap,
-					             Emergency_ram_reserve &);
+					             Emergency_ram_reserve &,
+					             Allocator &);
 			};
 
 			/**
@@ -412,7 +415,20 @@ namespace Genode {
 			 */
 			Local_parent &_parent();
 
+			Cap_session_capability _cap_session_cap;
+			Cap_session_client     _cap_session { _cap_session_cap };
+
+			Signal_session_capability _signal_session_cap;
+			Signal_session_client     _signal_session { _signal_session_cap };
+
 			Heap _heap;
+
+			/*
+			 * The '_heap' must be initialized before the '_context_area'
+			 * because the 'Local_parent' performs a dynamic memory allocation
+			 * due to the creation of the context area's sub-RM session.
+			 */
+			Attached_context_area _context_area;
 
 			/*
 			 * Emergency RAM reserve
@@ -451,8 +467,15 @@ namespace Genode {
 			 ** Env interface **
 			 *******************/
 
-			Parent *parent() { return &_parent(); }
-			Heap   *heap()   { return &_heap; }
+			Parent         *parent()         override { return &_parent(); }
+			Heap           *heap()           override { return &_heap; }
+			Cap_session    *cap_session()    override { return &_cap_session; }
+			Signal_session *signal_session() override { return &_signal_session; }
+
+			Signal_session_capability signal_session_cap() override
+			{
+				return _signal_session_cap;
+			}
 	};
 }
 

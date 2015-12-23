@@ -96,8 +96,8 @@ class Genode::Signal_session_component : public Rpc_object<Signal_session>
 		 * \param allocator  RAM allocator for meta data
 		 * \param quota      amount of RAM quota donated to this session
 		 */
-		Signal_session_component(Allocator * const allocator,
-		                         size_t const quota);
+		Signal_session_component(Rpc_entrypoint *, Rpc_entrypoint *,
+		                         Allocator *allocator, size_t const quota);
 
 		~Signal_session_component();
 

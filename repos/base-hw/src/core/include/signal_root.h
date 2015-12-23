@@ -28,7 +28,7 @@ namespace Genode
 	/**
 	 * Provide EP to signal root before it initialises root component
 	 */
-	class Signal_handler
+	class Signal_handler_ep
 	{
 		enum { STACK_SIZE = 4096 };
 
@@ -39,7 +39,7 @@ namespace Genode
 			/**
 			 * Constructor
 			 */
-			Signal_handler(Cap_session * const c)
+			Signal_handler_ep(Cap_session * const c)
 			: _entrypoint(c, STACK_SIZE, "signal") { }
 
 			/***************
@@ -52,7 +52,7 @@ namespace Genode
 	/**
 	 * Provides signal service by managing appropriate sessions to the clients
 	 */
-	class Signal_root : private Signal_handler,
+	class Signal_root : private Signal_handler_ep,
 	                    public  Root_component<Signal_session_component>
 	{
 		public:
@@ -64,7 +64,7 @@ namespace Genode
 			 * \param c   CAP session to be used by the root entrypoint
 			 */
 			Signal_root(Allocator * const md, Cap_session * const c) :
-				Signal_handler(c),
+				Signal_handler_ep(c),
 				Root_component<Signal_session_component>(entrypoint(), md)
 			{ }
 
@@ -79,7 +79,7 @@ namespace Genode
 				size_t ram_quota =
 					Arg_string::find_arg(args, "ram_quota").ulong_value(0);
 				return new (md_alloc())
-					Signal_session_component(md_alloc(), ram_quota);
+					Signal_session_component(nullptr, nullptr, md_alloc(), ram_quota);
 			}
 
 			void _upgrade_session(Signal_session_component *s,

@@ -25,5 +25,5 @@ void Signal_transmitter::submit(unsigned cnt)
 	{
 		Trace::Signal_submit trace_event(cnt);
 	}
-	connection()->submit(_context, cnt);
+	env()->signal_session()->submit(_context, cnt);
 }

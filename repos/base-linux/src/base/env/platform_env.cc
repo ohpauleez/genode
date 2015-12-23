@@ -75,8 +75,7 @@ Platform_env::Local_parent::session(Service_name const &service_name,
 		if (size != ~0UL)
 			size = align_addr(size, get_page_size_log2());
 
-		Rm_session_mmap *rm = new (env()->heap())
-		                      Rm_session_mmap(true, size);
+		Rm_session_mmap *rm = new (_alloc) Rm_session_mmap(true, size);
 
 		return Local_capability<Session>::local_cap(rm);
 	}
@@ -105,8 +104,10 @@ void Platform_env::Local_parent::close(Session_capability session)
 
 
 Platform_env::Local_parent::Local_parent(Parent_capability parent_cap,
-                                         Emergency_ram_reserve &reserve)
-: Expanding_parent_client(parent_cap, reserve)
+                                         Emergency_ram_reserve &reserve,
+                                         Allocator &alloc)
+:
+	Expanding_parent_client(parent_cap, reserve), _alloc(alloc)
 { }
 
 
@@ -149,7 +150,7 @@ static Parent_capability obtain_parent_cap()
 
 Platform_env::Local_parent &Platform_env::_parent()
 {
-	static Local_parent local_parent(obtain_parent_cap(), *this);
+	static Local_parent local_parent(obtain_parent_cap(), *this, _heap);
 	return local_parent;
 }
 
@@ -159,9 +160,22 @@ Platform_env::Platform_env()
 	Platform_env_base(static_cap_cast<Ram_session>(_parent().session("Env::ram_session", "")),
 	                  static_cap_cast<Cpu_session>(_parent().session("Env::cpu_session", "")),
 	                  static_cap_cast<Pd_session> (_parent().session("Env::pd_session",  ""))),
+
+	_cap_session_cap(static_cap_cast<Cap_session>
+		(_parent().session(Cap_session::service_name(), "ram_quota=4K"))),
+
+	_signal_session_cap(static_cap_cast<Signal_session>
+		(_parent().session(Signal_session::service_name(), "ram_quota=16K"))),
+
 	_heap(Platform_env_base::ram_session(), Platform_env_base::rm_session()),
+
+	_context_area(*parent(), *rm_session()),
+
 	_emergency_ram_ds(ram_session()->alloc(_emergency_ram_size()))
 {
+	env_context_area_ram_session = ram_session();
+	env_context_area_rm_session  = &_context_area;
+
 	/* register TID and PID of the main thread at core */
 	cpu_session()->thread_id(parent()->main_thread_cap(),
 	                         lx_getpid(), lx_gettid());

@@ -63,18 +63,27 @@ class Signal_handler_thread : Thread<STACK_SIZE>, Lock
 
 Signal_source *Signal_handler_thread::signal_source()
 {
-	static Signal_source_client sigsrc(signal_connection()->signal_source());
+	static Signal_source_client sigsrc(env()->signal_session()->signal_source());
 	return &sigsrc;
 }
 
 
-/**
- * Return process-wide signal source used for signal reception
- */
-static Signal_handler_thread *signal_handler_thread()
-{
-	static Signal_handler_thread signal_handler_thread;
-	return &signal_handler_thread;
+namespace Genode {
+
+	/*
+	 * Initialize the component-local signal-handling thread
+	 *
+	 * This function is called once at the startup of the component. It must
+	 * be called before creating the first signal receiver.
+	 *
+	 * We allow this function to be overridden in to enable core to omit the
+	 * creation of the signal thread.
+	 */
+	void init_signal_thread() __attribute__((weak));
+	void init_signal_thread()
+	{
+		static Signal_handler_thread signal_handler_thread;
+	}
 }
 
 
@@ -180,12 +189,7 @@ void Signal_context::submit(unsigned num)
  ** Signal receiver **
  *********************/
 
-
-Signal_receiver::Signal_receiver()
-{
-	/* make sure that the process-local signal handler thread is running */
-	signal_handler_thread();
-}
+Signal_receiver::Signal_receiver() { }
 
 
 Signal_context_capability Signal_receiver::manage(Signal_context *context)
@@ -208,7 +212,7 @@ Signal_context_capability Signal_receiver::manage(Signal_context *context)
 		try {
 
 			/* use signal context as imprint */
-			context->_cap = signal_connection()->alloc_context((long)context);
+			context->_cap = env()->signal_session()->alloc_context((long)context);
 			return context->_cap;
 
 		} catch (Signal_session::Out_of_metadata) {
@@ -223,7 +227,7 @@ Signal_context_capability Signal_receiver::manage(Signal_context *context)
 
 			PINF("upgrading quota donation for SIGNAL session (%zu bytes)", quota);
 
-			env()->parent()->upgrade(signal_connection()->cap(), buf);
+			env()->parent()->upgrade(env()->signal_session_cap(), buf);
 		}
 	};
 	return Signal_context_capability();

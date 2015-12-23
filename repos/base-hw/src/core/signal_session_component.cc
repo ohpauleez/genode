@@ -110,7 +110,9 @@ void Signal_session_component::free_context(Signal_context_capability cap)
 }
 
 
-Signal_session_component::Signal_session_component(Allocator * const allocator,
+Signal_session_component::Signal_session_component(Rpc_entrypoint *,
+                                                   Rpc_entrypoint *,
+                                                   Allocator * const allocator,
                                                    size_t const quota)
 : _allocator(allocator, quota), _receivers_slab(&_allocator),
   _contexts_slab(&_allocator) { }

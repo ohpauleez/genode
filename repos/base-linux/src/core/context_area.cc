@@ -105,16 +105,16 @@ class Context_area_ram_session : public Genode::Ram_session
  */
 namespace Genode {
 
-	Rm_session *env_context_area_rm_session()
-	{
-		static Context_area_rm_session inst;
-		return &inst;
-	}
+	Rm_session  *env_context_area_rm_session;
+	Ram_session *env_context_area_ram_session;
 
-	Ram_session *env_context_area_ram_session()
+	void init_context_area()
 	{
-		static Context_area_ram_session inst;
-		return &inst;
+		static Context_area_rm_session rm_inst;
+		env_context_area_rm_session = &rm_inst;
+
+		static Context_area_ram_session ram_inst;
+		env_context_area_ram_session = &ram_inst;
 	}
 }
 

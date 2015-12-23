@@ -7,6 +7,8 @@ install_config {
 		<parent-provides>
 			<service name="LOG"/>
 			<service name="RM"/>
+			<service name="CAP"/>
+			<service name="SIGNAL"/>
 		</parent-provides>
 		<default-route>
 			<any-service> <parent/> </any-service>

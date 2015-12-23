@@ -28,8 +28,8 @@ using namespace Genode;
  */
 namespace Genode {
 
-	Rm_session  *env_context_area_rm_session();
-	Ram_session *env_context_area_ram_session();
+	extern Rm_session  * const env_context_area_rm_session;
+	extern Ram_session * const env_context_area_ram_session;
 }
 
 
@@ -54,9 +54,9 @@ void Thread_base::Context::stack_size(size_t const size)
 	addr_t const ds_addr = stack_base - ds_size -
 	                       Native_config::context_area_virtual_base();
 	try {
-		Ram_session * const ram = env_context_area_ram_session();
+		Ram_session * const ram = env_context_area_ram_session;
 		Ram_dataspace_capability const ds_cap = ram->alloc(ds_size);
-		Rm_session * const rm = env_context_area_rm_session();
+		Rm_session * const rm = env_context_area_rm_session;
 		void * const attach_addr = rm->attach_at(ds_cap, ds_addr, ds_size);
 		if (ds_addr != (addr_t)attach_addr) { throw Stack_alloc_failed(); }
 	}
@@ -107,9 +107,9 @@ Thread_base::_alloc_context(size_t stack_size, bool main_thread)
 	/* allocate and attach backing store for the stack */
 	Ram_dataspace_capability ds_cap;
 	try {
-		ds_cap = env_context_area_ram_session()->alloc(ds_size);
+		ds_cap = env_context_area_ram_session->alloc(ds_size);
 		addr_t attach_addr = ds_addr - Native_config::context_area_virtual_base();
-		if (attach_addr != (addr_t)env_context_area_rm_session()->attach_at(ds_cap, attach_addr, ds_size))
+		if (attach_addr != (addr_t)env_context_area_rm_session->attach_at(ds_cap, attach_addr, ds_size))
 			throw Stack_alloc_failed();
 	}
 	catch (Ram_session::Alloc_failed) { throw Stack_alloc_failed(); }
@@ -140,8 +140,8 @@ void Thread_base::_free_context(Context* context)
 	/* call de-constructor explicitly before memory gets detached */
 	context->~Context();
 
-	Genode::env_context_area_rm_session()->detach((void *)ds_addr);
-	Genode::env_context_area_ram_session()->free(ds_cap);
+	Genode::env_context_area_rm_session->detach((void *)ds_addr);
+	Genode::env_context_area_ram_session->free(ds_cap);
 
 	/* context area ready for reuse */
 	_context_allocator()->free(context);
