@@ -65,6 +65,7 @@ proc append_platform_drv_config {} {
 			<service name="LOG"> <parent/> </service>
 			<service name="IO_MEM"> <parent/> </service>
 			<service name="RM"> <parent/> </service>
+			<service name="CAP"> <parent/> </service>
 			<service name="Report"> <child name="acpi_report_rom"/> </service>
 		</route>
 	</start>}
