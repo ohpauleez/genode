@@ -25,7 +25,6 @@
 #include <base/env.h>
 #include <base/heap.h>
 #include <cap_session/connection.h>
-#include <signal_session/connection.h>
 
 /* local includes */
 #include <platform_env_common.h>
@@ -94,9 +93,6 @@ class Genode::Platform_env : public Genode::Env, public Emergency_ram_reserve
 		Cap_session_capability _cap_session_cap;
 		Cap_session_client     _cap_session { _cap_session_cap };
 
-		Signal_session_capability _signal_session_cap;
-		Signal_session_client     _signal_session { _signal_session_cap };
-
 		Rm_session_capability _context_area_rm_session_cap;
 
 		Heap _heap;
@@ -131,9 +127,6 @@ class Genode::Platform_env : public Genode::Env, public Emergency_ram_reserve
 			_cap_session_cap(static_cap_cast<Cap_session>
 				(_parent_client.session(Cap_session::service_name(), "ram_quota=8K", Affinity()))),
 
-			_signal_session_cap(static_cap_cast<Signal_session>
-				(_parent_client.session(Signal_session::service_name(), "ram_quota=16K", Affinity()))),
-
 			_heap(&_resources.ram, &_resources.rm, Heap::UNLIMITED,
 			      _initial_heap_chunk, sizeof(_initial_heap_chunk)),
 
@@ -166,17 +159,16 @@ class Genode::Platform_env : public Genode::Env, public Emergency_ram_reserve
 		 ** Env interface **
 		 *******************/
 
-		Parent                   *parent()             override { return &_parent_client; }
-		Ram_session              *ram_session()        override { return &_resources.ram; }
-		Ram_session_capability    ram_session_cap()    override { return  _resources.ram; }
-		Cpu_session              *cpu_session()        override { return &_resources.cpu; }
-		Cpu_session_capability    cpu_session_cap()    override { return  _resources.cpu; }
-		Rm_session               *rm_session()         override { return &_resources.rm; }
-		Pd_session               *pd_session()         override { return &_resources.pd; }
-		Cap_session              *cap_session()        override { return &_cap_session; }
-		Signal_session           *signal_session()     override { return &_signal_session; }
-		Allocator                *heap()               override { return &_heap; }
-		Signal_session_capability signal_session_cap() override { return  _signal_session_cap; }
+		Parent                   *parent()          override { return &_parent_client; }
+		Ram_session              *ram_session()     override { return &_resources.ram; }
+		Ram_session_capability    ram_session_cap() override { return  _resources.ram; }
+		Cpu_session              *cpu_session()     override { return &_resources.cpu; }
+		Cpu_session_capability    cpu_session_cap() override { return  _resources.cpu; }
+		Rm_session               *rm_session()      override { return &_resources.rm; }
+		Pd_session               *pd_session()      override { return &_resources.pd; }
+		Pd_session_capability     pd_session_cap()  override { return  _resources.pd; }
+		Cap_session              *cap_session()     override { return &_cap_session; }
+		Allocator                *heap()            override { return &_heap; }
 };
 
 #endif /* _PLATFORM_ENV_H_ */

@@ -164,9 +164,6 @@ Platform_env::Platform_env()
 	_cap_session_cap(static_cap_cast<Cap_session>
 		(_parent().session(Cap_session::service_name(), "ram_quota=4K"))),
 
-	_signal_session_cap(static_cap_cast<Signal_session>
-		(_parent().session(Signal_session::service_name(), "ram_quota=16K"))),
-
 	_heap(Platform_env_base::ram_session(), Platform_env_base::rm_session()),
 
 	_context_area(*parent(), *rm_session()),

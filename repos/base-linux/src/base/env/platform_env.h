@@ -27,7 +27,6 @@
 #include <base/heap.h>
 #include <linux_cpu_session/client.h>
 #include <cap_session/connection.h>
-#include <signal_session/connection.h>
 
 /* local includes (from 'base/src/base/env/') */
 #include <platform_env_common.h>
@@ -321,6 +320,7 @@ namespace Genode {
 			Cpu_session_capability       _cpu_session_cap;
 			Expanding_cpu_session_client _cpu_session_client;
 			Rm_session_mmap              _rm_session_mmap;
+			Pd_session_capability        _pd_session_cap;
 			Pd_session_client            _pd_session_client;
 
 		public:
@@ -337,7 +337,8 @@ namespace Genode {
 				_cpu_session_cap(cpu_cap),
 				_cpu_session_client(static_cap_cast<Linux_cpu_session>(cpu_cap)),
 				_rm_session_mmap(false),
-				_pd_session_client(pd_cap)
+				_pd_session_cap(pd_cap),
+				_pd_session_client(_pd_session_cap)
 			{ }
 
 
@@ -351,6 +352,7 @@ namespace Genode {
 			Linux_cpu_session      *cpu_session()     override { return &_cpu_session_client; }
 			Cpu_session_capability  cpu_session_cap() override { return  _cpu_session_cap; }
 			Pd_session             *pd_session()      override { return &_pd_session_client; }
+			Pd_session_capability   pd_session_cap()  override { return  _pd_session_cap; }
 
 			/*
 			 * Support functions for implementing fork on Noux.
@@ -418,9 +420,6 @@ namespace Genode {
 			Cap_session_capability _cap_session_cap;
 			Cap_session_client     _cap_session { _cap_session_cap };
 
-			Signal_session_capability _signal_session_cap;
-			Signal_session_client     _signal_session { _signal_session_cap };
-
 			Heap _heap;
 
 			/*
@@ -467,15 +466,9 @@ namespace Genode {
 			 ** Env interface **
 			 *******************/
 
-			Parent         *parent()         override { return &_parent(); }
-			Heap           *heap()           override { return &_heap; }
-			Cap_session    *cap_session()    override { return &_cap_session; }
-			Signal_session *signal_session() override { return &_signal_session; }
-
-			Signal_session_capability signal_session_cap() override
-			{
-				return _signal_session_cap;
-			}
+			Parent      *parent()      override { return &_parent(); }
+			Heap        *heap()        override { return &_heap; }
+			Cap_session *cap_session() override { return &_cap_session; }
 	};
 }
 

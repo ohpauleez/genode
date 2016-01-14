@@ -107,9 +107,19 @@ namespace {
 			/* enable tracing support */
 			Genode::inhibit_tracing = false;
 
-			Genode::call_global_static_constructors();
-
+			/*
+			 * The signal thread must be initialized before the first signal
+			 * context is allocated. The signal thread initializes the
+			 * (kernel-specific) signal-delivery mechanism by instantiating
+			 * a 'Signal_source_client'. On some kernels (i.e., NOVA), signal
+			 * contexts can be created not before this object is constructed.
+			 * Therefore, we create the signal thread prior calling the global
+			 * static constructors, which may implicitly attempt to create
+			 * signal contexts.
+			 */
 			Genode::init_signal_thread();
+
+			Genode::call_global_static_constructors();
 
 			Genode::call_component_construct(env);
 		}

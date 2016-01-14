@@ -21,9 +21,8 @@
 #include <ram_session/ram_session.h>
 #include <cpu_session/cpu_session.h>
 #include <cpu_session/capability.h>
-#include <pd_session/pd_session.h>
+#include <pd_session/capability.h>
 #include <cap_session/cap_session.h>
-#include <signal_session/capability.h>
 #include <base/allocator.h>
 #include <base/snprintf.h>
 #include <base/lock.h>
@@ -82,17 +81,12 @@ struct Genode::Env
 	 * PD session of the component as created by the parent
 	 */
 	virtual Pd_session *pd_session() = 0;
+	virtual Pd_session_capability pd_session_cap() = 0;
 
 	/**
 	 * CAP session of the component as created by the startup code
 	 */
 	virtual Cap_session *cap_session() = 0;
-
-	/**
-	 * SIGNAL session of the component as created by the startup code
-	 */
-	virtual Signal_session           *signal_session() = 0;
-	virtual Signal_session_capability signal_session_cap() = 0;
 
 	/**
 	 * Heap backed by the RAM session of the environment

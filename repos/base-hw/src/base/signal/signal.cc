@@ -14,7 +14,8 @@
 /* Genode includes */
 #include <base/thread.h>
 #include <base/signal.h>
-#include <signal_session/connection.h>
+#include <base/env.h>
+#include <base/trace/events.h>
 
 /* base-hw includes */
 #include <kernel/interface.h>
@@ -62,18 +63,18 @@ Signal_receiver::Signal_receiver()
 	bool session_upgraded = 0;
 	while (1) {
 		try {
-			_cap = env()->signal_session()->alloc_receiver();
+			_cap = env()->pd_session()->alloc_signal_source();
 			return;
-		} catch (Signal_session::Out_of_metadata)
+		} catch (Pd_session::Out_of_metadata)
 		{
 			/* upgrade session quota and try again, but only once */
 			if (session_upgraded) {
-				PERR("failed to alloc signal receiver");
-				_cap = Signal_receiver_capability();
+				PERR("failed to allocate signal source");
+				_cap = Capability<Signal_source>();
 				return;
 			}
 			PINF("upgrading quota donation for SIGNAL session");
-			env()->parent()->upgrade(env()->signal_session_cap(), "ram_quota=8K");
+			env()->parent()->upgrade(env()->pd_session_cap(), "ram_quota=8K");
 			session_upgraded = 1;
 		}
 	}
@@ -83,7 +84,7 @@ Signal_receiver::Signal_receiver()
 void Signal_receiver::_platform_destructor()
 {
 	/* release server resources of receiver */
-	env()->signal_session()->free_receiver(_cap);
+	env()->pd_session()->free_signal_source(_cap);
 }
 
 
@@ -106,19 +107,19 @@ Signal_context_capability Signal_receiver::manage(Signal_context * const c)
 	bool session_upgraded = 0;
 	while (1) {
 		try {
-			c->_cap = env()->signal_session()->alloc_context(_cap, (unsigned long)c);
+			c->_cap = env()->pd_session()->alloc_context(_cap, (unsigned long)c);
 			c->_receiver = this;
 			_contexts.insert(&c->_receiver_le);
 			return c->_cap;
-		} catch (Signal_session::Out_of_metadata)
+		} catch (Pd_session::Out_of_metadata)
 		{
 			/* upgrade session quota and try again, but only once */
 			if (session_upgraded) {
-				PERR("failed to alloc signal context");
+				PERR("failed to allocate signal context");
 				return Signal_context_capability();
 			}
 			PINF("upgrading quota donation for signal session");
-			env()->parent()->upgrade(env()->signal_session_cap(), "ram_quota=8K");
+			env()->parent()->upgrade(env()->pd_session_cap(), "ram_quota=8K");
 			session_upgraded = 1;
 		}
 	}

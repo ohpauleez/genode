@@ -22,12 +22,14 @@
 #include <base/env.h>
 #include <base/heap.h>
 #include <ram_session/client.h>
+#include <pd_session/client.h>
 #include <rm_session/capability.h>
 
 /* core includes */
 #include <platform.h>
 #include <core_parent.h>
 #include <core_rm_session.h>
+#include <core_pd_session.h>
 #include <cap_session_component.h>
 #include <ram_session_component.h>
 
@@ -115,10 +117,8 @@ namespace Genode {
 
 			typedef Synchronized_ram_session<Ram_session_component> Core_ram_session;
 
-			enum { ENTRYPOINT_STACK_SIZE = 2048 * sizeof(Genode::addr_t) };
-
-			Core_parent                  _core_parent;
-			Cap_session_component        _cap_session;
+			Core_parent           _core_parent;
+			Cap_session_component _cap_session;
 
 			/*
 			 * Initialize the context area before creating the first thread,
@@ -127,29 +127,43 @@ namespace Genode {
 			bool _init_context_area() { init_context_area(); return true; }
 			bool _context_area_initialized = _init_context_area();
 
+			enum { ENTRYPOINT_STACK_SIZE = 2048 * sizeof(Genode::addr_t) };
+
 			Rpc_entrypoint               _entrypoint;
 			Core_rm_session              _rm_session;
 			Core_ram_session             _ram_session;
-			Heap                         _heap;
 			Ram_session_capability const _ram_session_cap;
+
+			/*
+			 * The core-local PD session is provided by a real RPC object
+			 * dispatched by the same entrypoint as the signal-source RPC
+			 * objects. This is needed to allow the 'Pd_session::submit'
+			 * method to issue out-of-order replies to
+			 * 'Signal_source::wait_for_signal' calls.
+			 */
+			Core_pd_session_component _pd_session_component;
+			Pd_session_client         _pd_session_client;
+
+			Heap _heap;
 
 		public:
 
 			/**
 			 * Constructor
 			 */
-			Core_env() :
+			Core_env()
+			:
 				_cap_session(platform()->core_mem_alloc(), "ram_quota=4K"),
 				_entrypoint(&_cap_session, ENTRYPOINT_STACK_SIZE, "entrypoint"),
 				_rm_session(&_entrypoint),
 				_ram_session(&_entrypoint, &_entrypoint,
 				             platform()->ram_alloc(), platform()->core_mem_alloc(),
 				             "ram_quota=4M", platform()->ram_alloc()->avail()),
-				_heap(&_ram_session, &_rm_session),
-				_ram_session_cap(_entrypoint.manage(&_ram_session))
-			{ 
-				PDBG("constructed");
-			}
+				_ram_session_cap(_entrypoint.manage(&_ram_session)),
+				_pd_session_component(_entrypoint /* XXX use a different entrypoint */),
+				_pd_session_client(_entrypoint.manage(&_pd_session_component)),
+				_heap(&_ram_session, &_rm_session)
+			{ }
 
 			/**
 			 * Destructor
@@ -168,7 +182,7 @@ namespace Genode {
 			Ram_session_capability  ram_session_cap() override { return  _ram_session_cap; }
 			Rm_session             *rm_session()      override { return &_rm_session; }
 			Cap_session            *cap_session()     override { return &_cap_session; }
-			Signal_session         *signal_session()  override { return nullptr; }
+			Pd_session             *pd_session()      override { return &_pd_session_client; }
 			Allocator              *heap()            override { return &_heap; }
 
 			Cpu_session *cpu_session() override
@@ -183,16 +197,10 @@ namespace Genode {
 				return Cpu_session_capability();
 			}
 
-			Signal_session_capability signal_session_cap() override
+			Pd_session_capability pd_session_cap() override
 			{
 				PWRN("%s:%u not implemented", __FILE__, __LINE__);
-				return Signal_session_capability();
-			}
-
-			Pd_session *pd_session() override
-			{
-				PWRN("%s:%u not implemented", __FILE__, __LINE__);
-				return 0;
+				return Pd_session_capability();
 			}
 
 			void reinit(Capability<Parent>::Dst, long) override { }

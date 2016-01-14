@@ -20,7 +20,7 @@
 #include <util/noncopyable.h>
 #include <util/list.h>
 #include <base/semaphore.h>
-#include <signal_session/signal_session.h>
+#include <base/capability.h>
 
 /* only needed for base-hw */
 namespace Kernel { struct Signal_receiver; }
@@ -29,14 +29,18 @@ namespace Genode {
 
 	class Entrypoint;
 	class Signal_source;
+
 	class Signal_receiver;
 	class Signal_context;
 	class Signal_context_registry;
 	class Signal_transmitter;
 	class Signal;
 	class Signal_dispatcher_base;
-	template <typename> class Signal_dispatcher;
+
+	template <typename>           class Signal_dispatcher;
 	template <typename, typename> class Signal_handler;
+
+	typedef Capability<Signal_context> Signal_context_capability;
 }
 
 
@@ -177,7 +181,7 @@ class Genode::Signal_receiver : Noncopyable
 		 * Provides the kernel-object name via the 'dst' method. This is
 		 * needed for 'base-hw' only.
 		 */
-		Signal_receiver_capability _cap;
+		Capability<Signal_source> _cap;
 
 		/**
 		 * List of associated contexts
@@ -284,7 +288,7 @@ class Genode::Signal_receiver : Noncopyable
 		 * source associated with the process. It must not be used for other
 		 * purposes.
 		 */
-		static void dispatch_signals(Signal_source *signal_source);
+		static void dispatch_signals(Signal_source *);
 };
 
 

@@ -23,7 +23,6 @@
 #include <core_parent.h>
 #include <cap_session_component.h>
 #include <ram_session_component.h>
-#include <signal_session_component.h>
 
 /* internal base includes */
 #include <platform_env.h>
@@ -150,7 +149,6 @@ namespace Genode {
 
 			Entrypoint                   _entrypoint;
 			Core_ram_session             _ram_session;
-			Signal_session_component     _signal_session;
 			Heap                         _heap;
 			Ram_session_capability const _ram_session_cap;
 
@@ -171,8 +169,6 @@ namespace Genode {
 				_ram_session(&_entrypoint, &_entrypoint,
 				             platform()->ram_alloc(), platform()->core_mem_alloc(),
 				             "ram_quota=4M", platform()->ram_alloc()->avail()),
-				_signal_session(&_entrypoint, &_entrypoint,
-				                platform()->core_mem_alloc(), SIGNAL_RAM_QUOTA),
 				_heap(&_ram_session, Platform_env_base::rm_session()),
 				_ram_session_cap(_entrypoint.manage(&_ram_session))
 			{ }
@@ -198,19 +194,12 @@ namespace Genode {
 			Ram_session            *ram_session()     override { return &_ram_session; }
 			Ram_session_capability  ram_session_cap() override { return  _ram_session_cap; }
 			Cap_session            *cap_session()     override { return &_cap_session; }
-			Signal_session         *signal_session()  override { return &_signal_session; }
 			Allocator              *heap()            override { return &_heap; }
 
 			Cpu_session_capability cpu_session_cap() override
 			{
 				PWRN("%s:%u not implemented", __FILE__, __LINE__);
 				return Cpu_session_capability();
-			}
-
-			Signal_session_capability signal_session_cap() override
-			{
-				PWRN("%s:%u not implemented", __FILE__, __LINE__);
-				return Signal_session_capability();
 			}
 
 			Pd_session *pd_session() override
