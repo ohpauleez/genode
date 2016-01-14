@@ -1131,7 +1131,7 @@ int main(int argc, char **argv)
 
 	/* whitelist of service requests to be routed to the parent */
 	static Genode::Service_registry parent_services;
-	char const *service_names[] = { "LOG", "ROM", "Timer", 0 };
+	char const *service_names[] = { "LOG", "ROM", "CAP", "Timer", 0 };
 	for (unsigned i = 0; service_names[i]; i++)
 		parent_services.insert(new Genode::Parent_service(service_names[i]));
 
