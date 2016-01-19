@@ -21,7 +21,7 @@
 /* core includes */
 #include <platform.h>
 #include <core_parent.h>
-#include <cap_session_component.h>
+#include <core_pd_session.h>
 #include <ram_session_component.h>
 
 /* internal base includes */
@@ -127,9 +127,9 @@ namespace Genode {
 			{
 				enum { STACK_SIZE = 2048 * sizeof(Genode::addr_t) };
 
-				Entrypoint(Cap_session *cap_session)
+				Entrypoint()
 				:
-					Rpc_entrypoint(cap_session, STACK_SIZE, "entrypoint")
+					Rpc_entrypoint(nullptr, STACK_SIZE, "entrypoint")
 				{ }
 			};
 
@@ -137,8 +137,7 @@ namespace Genode {
 
 			typedef Synchronized_ram_session<Ram_session_component> Core_ram_session;
 
-			Core_parent                  _core_parent;
-			Cap_session_component        _cap_session;
+			Core_parent _core_parent;
 
 			/*
 			 * Initialize the context area before creating the first thread,
@@ -164,8 +163,6 @@ namespace Genode {
 				Platform_env_base(Ram_session_capability(),
 				                  Cpu_session_capability(),
 				                  Pd_session_capability()),
-				_cap_session(platform()->core_mem_alloc(), "ram_quota=4K"),
-				_entrypoint(&_cap_session),
 				_ram_session(&_entrypoint, &_entrypoint,
 				             platform()->ram_alloc(), platform()->core_mem_alloc(),
 				             "ram_quota=4M", platform()->ram_alloc()->avail()),
@@ -193,7 +190,6 @@ namespace Genode {
 			Parent                 *parent()          override { return &_core_parent; }
 			Ram_session            *ram_session()     override { return &_ram_session; }
 			Ram_session_capability  ram_session_cap() override { return  _ram_session_cap; }
-			Cap_session            *cap_session()     override { return &_cap_session; }
 			Allocator              *heap()            override { return &_heap; }
 
 			Cpu_session_capability cpu_session_cap() override
@@ -204,8 +200,13 @@ namespace Genode {
 
 			Pd_session *pd_session() override
 			{
-				PWRN("%s:%u not implemented", __FILE__, __LINE__);
-				return 0;
+				/*
+				 * This function is called during the construction of RPC
+				 * entrypoints. However, within core, the PD session argument
+				 * to the RPC entrypoint remains unused. So we can return a
+				 * null pointer.
+				 */
+				return nullptr;
 			}
 
 			void reload_parent_cap(Capability<Parent>::Dst, long) { }

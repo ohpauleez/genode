@@ -26,7 +26,6 @@
 #include <base/local_capability.h>
 #include <base/heap.h>
 #include <linux_cpu_session/client.h>
-#include <cap_session/connection.h>
 
 /* local includes (from 'base/src/base/env/') */
 #include <platform_env_common.h>
@@ -417,9 +416,6 @@ namespace Genode {
 			 */
 			Local_parent &_parent();
 
-			Cap_session_capability _cap_session_cap;
-			Cap_session_client     _cap_session { _cap_session_cap };
-
 			Heap _heap;
 
 			/*
@@ -466,9 +462,8 @@ namespace Genode {
 			 ** Env interface **
 			 *******************/
 
-			Parent      *parent()      override { return &_parent(); }
-			Heap        *heap()        override { return &_heap; }
-			Cap_session *cap_session() override { return &_cap_session; }
+			Parent *parent() override { return &_parent(); }
+			Heap   *heap()   override { return &_heap; }
 	};
 }
 

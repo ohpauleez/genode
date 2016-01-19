@@ -30,7 +30,6 @@
 #include <core_parent.h>
 #include <core_rm_session.h>
 #include <core_pd_session.h>
-#include <cap_session_component.h>
 #include <ram_session_component.h>
 
 namespace Genode { void init_context_area(); }
@@ -117,8 +116,7 @@ namespace Genode {
 
 			typedef Synchronized_ram_session<Ram_session_component> Core_ram_session;
 
-			Core_parent           _core_parent;
-			Cap_session_component _cap_session;
+			Core_parent _core_parent;
 
 			/*
 			 * Initialize the context area before creating the first thread,
@@ -153,8 +151,7 @@ namespace Genode {
 			 */
 			Core_env()
 			:
-				_cap_session(platform()->core_mem_alloc(), "ram_quota=4K"),
-				_entrypoint(&_cap_session, ENTRYPOINT_STACK_SIZE, "entrypoint"),
+				_entrypoint(nullptr, ENTRYPOINT_STACK_SIZE, "entrypoint"),
 				_rm_session(&_entrypoint),
 				_ram_session(&_entrypoint, &_entrypoint,
 				             platform()->ram_alloc(), platform()->core_mem_alloc(),
@@ -181,7 +178,6 @@ namespace Genode {
 			Ram_session            *ram_session()     override { return &_ram_session; }
 			Ram_session_capability  ram_session_cap() override { return  _ram_session_cap; }
 			Rm_session             *rm_session()      override { return &_rm_session; }
-			Cap_session            *cap_session()     override { return &_cap_session; }
 			Pd_session             *pd_session()      override { return &_pd_session_client; }
 			Allocator              *heap()            override { return &_heap; }
 

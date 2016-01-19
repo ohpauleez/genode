@@ -84,11 +84,6 @@ struct Genode::Env
 	virtual Pd_session_capability pd_session_cap() = 0;
 
 	/**
-	 * CAP session of the component as created by the startup code
-	 */
-	virtual Cap_session *cap_session() = 0;
-
-	/**
 	 * Heap backed by the RAM session of the environment
 	 */
 	virtual Allocator *heap() = 0;

@@ -254,7 +254,7 @@ struct Genode::Startup
 	/*
 	 * The construction of the main entrypoint does never return.
 	 */
-	Entrypoint ep { *Genode::env()->cap_session(), env };
+	Entrypoint ep { *Genode::env()->pd_session(), env };
 };
 
 

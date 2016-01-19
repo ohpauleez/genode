@@ -107,6 +107,10 @@ Thread_base::_alloc_context(size_t stack_size, bool main_thread)
 	/* allocate and attach backing store for the stack */
 	Ram_dataspace_capability ds_cap;
 	try {
+		if (!env_context_area_ram_session) {
+			PERR("env_context_area_ram_session not defined");
+			for (;;);
+		}
 		ds_cap = env_context_area_ram_session->alloc(ds_size);
 		addr_t attach_addr = ds_addr - Native_config::context_area_virtual_base();
 		if (attach_addr != (addr_t)env_context_area_rm_session->attach_at(ds_cap, attach_addr, ds_size))

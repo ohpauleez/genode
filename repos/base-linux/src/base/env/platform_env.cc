@@ -161,9 +161,6 @@ Platform_env::Platform_env()
 	                  static_cap_cast<Cpu_session>(_parent().session("Env::cpu_session", "")),
 	                  static_cap_cast<Pd_session> (_parent().session("Env::pd_session",  ""))),
 
-	_cap_session_cap(static_cap_cast<Cap_session>
-		(_parent().session(Cap_session::service_name(), "ram_quota=4K"))),
-
 	_heap(Platform_env_base::ram_session(), Platform_env_base::rm_session()),
 
 	_context_area(*parent(), *rm_session()),
