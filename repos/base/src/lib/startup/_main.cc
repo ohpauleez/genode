@@ -28,7 +28,7 @@
 #include <cap_session/connection.h>
 
 /* platform-specific local helper functions */
-#include <_main_parent_cap.h>
+#include <startup/internal/_main_parent_cap.h>
 
 
 enum { ATEXIT_SIZE = 256 };

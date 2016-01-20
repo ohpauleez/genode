@@ -24,11 +24,7 @@ SRC_CC += irq/platform.cc
 SRC_CC += entrypoint/entrypoint.cc
 SRC_CC += sleep.cc
 
-INC_DIR +=  $(REP_DIR)/src/base/lock $(BASE_DIR)/src/base/lock
-INC_DIR +=  $(REP_DIR)/src/base/ipc
-INC_DIR +=  $(REP_DIR)/src/base/env $(BASE_DIR)/src/base/env
-INC_DIR +=  $(BASE_DIR)/src/lib/startup
-INC_DIR += $(BASE_DIR)/src/base/thread
+INC_DIR += $(REP_DIR)/src/include $(BASE_DIR)/src/include
 
 vpath %.cc $(REP_DIR)/src/base
 vpath %.cc $(BASE_DIR)/src/base

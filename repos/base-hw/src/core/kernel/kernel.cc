@@ -35,8 +35,10 @@
 #include <platform_thread.h>
 
 /* base includes */
-#include <unmanaged_singleton.h>
 #include <base/native_types.h>
+
+/* base-internal includes */
+#include <base/internal/unmanaged_singleton.h>
 
 /* base-hw includes */
 #include <kernel/perf_counter.h>

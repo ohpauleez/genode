@@ -24,8 +24,8 @@
 #include <core_pd_session.h>
 #include <ram_session_component.h>
 
-/* internal base includes */
-#include <platform_env.h>
+/* base-internal includes */
+#include <base/internal/platform_env.h>
 
 namespace Genode { void init_context_area(); }
 
