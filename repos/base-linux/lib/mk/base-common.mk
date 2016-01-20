@@ -22,6 +22,7 @@ SRC_CC += server/server.cc server/common.cc
 SRC_CC += thread/trace.cc thread/thread_env.cc thread/context_allocator.cc
 SRC_CC += irq/platform.cc
 SRC_CC += entrypoint/entrypoint.cc
+SRC_CC += sleep.cc
 
 INC_DIR +=  $(REP_DIR)/src/base/lock $(BASE_DIR)/src/base/lock
 INC_DIR +=  $(REP_DIR)/src/base/ipc
