@@ -13,8 +13,8 @@
  * under the terms of the GNU General Public License version 2.
  */
 
-#ifndef _PLATFORM_ENV_COMMON_H_
-#define _PLATFORM_ENV_COMMON_H_
+#ifndef _INCLUDE__BASE__INTERNAL__PLATFORM_ENV_COMMON_H_
+#define _INCLUDE__BASE__INTERNAL__PLATFORM_ENV_COMMON_H_
 
 #include <base/env.h>
 #include <util/arg_string.h>
@@ -359,4 +359,4 @@ struct Genode::Attached_context_area : Genode::Expanding_rm_session_client
 };
 
 
-#endif /* _PLATFORM_ENV_COMMON_H_ */
+#endif /* _INCLUDE__BASE__INTERNAL__PLATFORM_ENV_COMMON_H_ */

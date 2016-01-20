@@ -11,8 +11,8 @@
  * under the terms of the GNU General Public License version 2.
  */
 
-#ifndef _SPEC__CORTEX_A9__BOARD_SUPPORT_H_
-#define _SPEC__CORTEX_A9__BOARD_SUPPORT_H_
+#ifndef _CORE__INCLUDE__SPEC__CORTEX_A9__BOARD_SUPPORT_H_
+#define _CORE__INCLUDE__SPEC__CORTEX_A9__BOARD_SUPPORT_H_
 
 /* core includes */
 #include <drivers/board_base.h>
@@ -43,4 +43,4 @@ class Cortex_a9::Board : public Genode::Board_base
 		};
 };
 
-#endif /* _SPEC__CORTEX_A9__BOARD_SUPPORT_H_ */
+#endif /* _CORE__INCLUDE__SPEC__CORTEX_A9__BOARD_SUPPORT_H_ */

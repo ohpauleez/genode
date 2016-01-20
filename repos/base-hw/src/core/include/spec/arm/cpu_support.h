@@ -12,8 +12,8 @@
  * under the terms of the GNU General Public License version 2.
  */
 
-#ifndef _SPEC__ARM__CPU_SUPPORT_H_
-#define _SPEC__ARM__CPU_SUPPORT_H_
+#ifndef _CORE__INCLUDE__SPEC__ARM__CPU_SUPPORT_H_
+#define _CORE__INCLUDE__SPEC__ARM__CPU_SUPPORT_H_
 
 /* Genode includes */
 #include <util/register.h>
@@ -539,4 +539,4 @@ class Genode::Arm
 		}
 };
 
-#endif /* _SPEC__ARM__CPU_SUPPORT_H_ */
+#endif /* _CORE__INCLUDE__SPEC__ARM__CPU_SUPPORT_H_ */

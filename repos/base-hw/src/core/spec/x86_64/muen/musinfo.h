@@ -1,5 +1,18 @@
-#ifndef MUSINFO_H_
-#define MUSINFO_H_
+/*
+ * \brief   Muen subject info
+ * \author  Stefan Kalkowski
+ * \date    2015-06-02
+ */
+
+/*
+ * Copyright (C) 2015 Genode Labs GmbH
+ *
+ * This file is part of the Genode OS framework, which is distributed
+ * under the terms of the GNU General Public License version 2.
+ */
+
+#ifndef _CORE__SPEC__X86_64__MUEN__MUSINFO_H_
+#define _CORE__SPEC__X86_64__MUEN__MUSINFO_H_
 
 #include <base/stdint.h>
 
@@ -56,4 +69,4 @@ struct subject_info_type {
 	struct channel_info_type channels_info[MAX_RESOURCE_COUNT];
 } __attribute__((packed, aligned (8)));
 
-#endif /* MUSINFO_H_  */
+#endif /* _CORE__SPEC__X86_64__MUEN__MUSINFO_H_ */

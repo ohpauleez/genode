@@ -11,8 +11,8 @@
  * under the terms of the GNU General Public License version 2.
  */
 
-#ifndef _SPEC__PBXA9__BOARD_H_
-#define _SPEC__PBXA9__BOARD_H_
+#ifndef _CORE__INCLUDE__SPEC__PBXA9__BOARD_H_
+#define _CORE__INCLUDE__SPEC__PBXA9__BOARD_H_
 
 /* core includes */
 #include <spec/cortex_a9/board_support.h>
@@ -31,4 +31,4 @@ namespace Genode
 	};
 }
 
-#endif /* _SPEC__PBXA9__BOARD_H_ */
+#endif /* _CORE__INCLUDE__SPEC__PBXA9__BOARD_H_ */

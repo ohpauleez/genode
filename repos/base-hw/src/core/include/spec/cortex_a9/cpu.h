@@ -11,8 +11,8 @@
  * under the terms of the GNU General Public License version 2.
  */
 
-#ifndef _CPU_H_
-#define _CPU_H_
+#ifndef _CORE__INCLUDE__SPEC__CORTEX_A9__CPU_H_
+#define _CORE__INCLUDE__SPEC__CORTEX_A9__CPU_H_
 
 /* core includes */
 #include <spec/arm_v7/cpu_support.h>
@@ -322,4 +322,4 @@ Genode::Cpu_lazy_state::Cpu_lazy_state() { fpexc = Cpu::Fpexc::En::bits(1); }
  *  head branch as from 2014.04.17.
  */
 
-#endif /* _CPU_H_ */
+#endif /* _CORE__INCLUDE__SPEC__CORTEX_A9__CPU_H_ */

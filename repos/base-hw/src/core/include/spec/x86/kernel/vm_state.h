@@ -11,8 +11,8 @@
  * under the terms of the GNU General Public License version 2.
  */
 
-#ifndef _KERNEL__VM_STATE_H_
-#define _KERNEL__VM_STATE_H_
+#ifndef _CORE__INCLUDE__SPEC__X86__KERNEL__VM_STATE_H_
+#define _CORE__INCLUDE__SPEC__X86__KERNEL__VM_STATE_H_
 
 namespace Kernel
 {
@@ -22,4 +22,4 @@ namespace Kernel
 	struct Vm_state { };
 }
 
-#endif /* _KERNEL__VM_STATE_H_ */
+#endif /* _CORE__INCLUDE__SPEC__X86__KERNEL__VM_STATE_H_ */
