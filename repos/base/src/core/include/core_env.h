@@ -32,7 +32,7 @@
 #include <core_pd_session.h>
 #include <ram_session_component.h>
 
-namespace Genode { void init_context_area(); }
+namespace Genode { void init_stack_area(); }
 
 namespace Genode {
 
@@ -119,11 +119,11 @@ namespace Genode {
 			Core_parent _core_parent;
 
 			/*
-			 * Initialize the context area before creating the first thread,
+			 * Initialize the stack area before creating the first thread,
 			 * which happens to be the '_entrypoint'.
 			 */
-			bool _init_context_area() { init_context_area(); return true; }
-			bool _context_area_initialized = _init_context_area();
+			bool _init_stack_area() { init_stack_area(); return true; }
+			bool _stack_area_initialized = _init_stack_area();
 
 			enum { ENTRYPOINT_STACK_SIZE = 2048 * sizeof(Genode::addr_t) };
 

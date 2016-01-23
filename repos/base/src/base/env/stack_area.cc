@@ -1,5 +1,5 @@
 /*
- * \brief  Process-local thread-context area
+ * \brief  Component-local stack area
  * \author Norman Feske
  * \date   2010-01-19
  */
@@ -16,7 +16,7 @@
 using namespace Genode;
 
 namespace Genode {
-	Rm_session  *env_context_area_rm_session;
-	Ram_session *env_context_area_ram_session;
+	Rm_session  *env_stack_area_rm_session;
+	Ram_session *env_stack_area_ram_session;
 }
 

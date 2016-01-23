@@ -211,7 +211,7 @@ namespace Genode {
 					 * the common use case of managed dataspaces as mechanism
 					 * to reserve parts of the local address space from being
 					 * populated by the 'env()->rm_session()'. (i.e., for the
-					 * context area, or for the placement of consecutive
+					 * stack area, or for the placement of consecutive
 					 * shared-library segments)
 					 */
 					addr_t _base;
@@ -419,11 +419,11 @@ namespace Genode {
 			Heap _heap;
 
 			/*
-			 * The '_heap' must be initialized before the '_context_area'
+			 * The '_heap' must be initialized before the '_stack_area'
 			 * because the 'Local_parent' performs a dynamic memory allocation
-			 * due to the creation of the context area's sub-RM session.
+			 * due to the creation of the stack area's sub-RM session.
 			 */
-			Attached_context_area _context_area;
+			Attached_stack_area _stack_area;
 
 			/*
 			 * Emergency RAM reserve

@@ -1,5 +1,5 @@
 TARGET = test-sel4
-SRC_CC = main.cc context_area.cc mini_env.cc thread.cc
+SRC_CC = main.cc stack_area.cc mini_env.cc thread.cc
 
 LIBS   = core_printf syscall
 
@@ -22,7 +22,7 @@ SRC_CC += lock/lock.cc
 SRC_CC += signal/signal.cc signal/common.cc
 SRC_CC += server/server.cc
 SRC_CC += thread/trace.cc
-SRC_CC += thread/context_allocator.cc
+SRC_CC += thread/stack_allocator.cc
 SRC_CC += env/capability.cc env/capability_space.cc
 
 INC_DIR +=  $(REP_DIR)/src/base

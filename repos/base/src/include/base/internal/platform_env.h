@@ -89,16 +89,16 @@ class Genode::Platform_env : public Genode::Env, public Emergency_ram_reserve
 
 		Resources _resources;
 
-		Rm_session_capability _context_area_rm_session_cap;
+		Rm_session_capability _stack_area_rm_session_cap;
 
 		Heap _heap;
 
 		/*
-		 * The '_heap' must be initialized before the '_context_area'
-		 * because the 'Local_parent' performs a dynamic memory allocation
-		 * due to the creation of the context area's sub-RM session.
+		 * The '_heap' must be initialized before the '_stack_area' because the
+		 * 'Local_parent' performs a dynamic memory allocation due to the
+		 * creation of the stack area's sub-RM session.
 		 */
-		Attached_context_area _context_area { _parent_client, _resources.rm };
+		Attached_stack_area _stack_area { _parent_client, _resources.rm };
 
 		char _initial_heap_chunk[sizeof(addr_t) * 4096];
 
@@ -125,8 +125,8 @@ class Genode::Platform_env : public Genode::Env, public Emergency_ram_reserve
 
 			_emergency_ram_ds(_resources.ram.alloc(_emergency_ram_size()))
 		{
-			env_context_area_ram_session = &_resources.ram;
-			env_context_area_rm_session  = &_context_area;
+			env_stack_area_ram_session = &_resources.ram;
+			env_stack_area_rm_session  = &_stack_area;
 		}
 
 		/*

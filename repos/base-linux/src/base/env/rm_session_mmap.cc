@@ -40,7 +40,7 @@
 /* base-internal includes */
 #include <base/internal/local_capability.h>
 #include <base/internal/platform_env.h>
-#include <base/internal/context_area.h>
+#include <base/internal/stack_area.h>
 
 using namespace Genode;
 
@@ -60,8 +60,8 @@ addr_t Platform_env_base::Rm_session_mmap::_reserve_local(bool           use_loc
 {
 	/* special handling for context area */
 	if (use_local_addr
-	 && local_addr == Native_config::context_area_virtual_base()
-	 && size       == Native_config::context_area_virtual_size()) {
+	 && local_addr == Native_config::stack_area_virtual_base()
+	 && size       == Native_config::stack_area_virtual_size()) {
 
 		/*
 		 * On the first request to reserve the context area, we flush the
@@ -73,8 +73,8 @@ addr_t Platform_env_base::Rm_session_mmap::_reserve_local(bool           use_loc
 		{
 			Context()
 			{
-				flush_context_area();
-				reserve_context_area();
+				flush_stack_area();
+				reserve_stack_area();
 			}
 		} inst;
 

@@ -163,12 +163,12 @@ Platform_env::Platform_env()
 
 	_heap(Platform_env_base::ram_session(), Platform_env_base::rm_session()),
 
-	_context_area(*parent(), *rm_session()),
+	_stack_area(*parent(), *rm_session()),
 
 	_emergency_ram_ds(ram_session()->alloc(_emergency_ram_size()))
 {
-	env_context_area_ram_session = ram_session();
-	env_context_area_rm_session  = &_context_area;
+	env_stack_area_ram_session = ram_session();
+	env_stack_area_rm_session  = &_stack_area;
 
 	/* register TID and PID of the main thread at core */
 	cpu_session()->thread_id(parent()->main_thread_cap(),

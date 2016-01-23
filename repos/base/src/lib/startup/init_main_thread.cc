@@ -25,7 +25,7 @@ addr_t init_main_thread_result;
 
 extern void init_exception_handling();
 
-namespace Genode { extern Rm_session * const env_context_area_rm_session; }
+namespace Genode { extern Rm_session * const env_stack_area_rm_session; }
 
 void prepare_init_main_thread();
 
@@ -106,7 +106,7 @@ extern "C" void init_main_thread()
 	 * Genode's heap and, in some corner cases, consumes several KB of stack.
 	 * This is usually not a problem when the first exception is triggered from
 	 * the main thread but it becomes an issue when the first exception is
-	 * thrown from the context of a thread with a specially tailored (and
+	 * thrown from the stack of a thread with a specially tailored (and
 	 * otherwise sufficient) stack size. By throwing an exception here, we
 	 * mitigate this issue by eagerly performing those allocations.
 	 */

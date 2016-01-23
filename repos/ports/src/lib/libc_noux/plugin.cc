@@ -94,9 +94,9 @@ class Noux_connection
 		Noux_connection() : _sysio(_obtain_sysio()) { }
 
 		/**
-		 * Return the capability of the local context-area RM session
+		 * Return the capability of the local stack-area RM session
 		 */
-		Genode::Rm_session_capability context_area_rm_session()
+		Genode::Rm_session_capability stack_area_rm_session()
 		{
 			int on_stack;
 			return _connection.lookup_rm_session((Genode::addr_t)&on_stack);
@@ -535,8 +535,8 @@ extern "C" pid_t fork(void)
 		 */
 
 		/* reinitialize main-thread object which implies reinit of context area */
-		auto context_area_rm = noux_connection()->context_area_rm_session();
-		Genode::env()->reinit_main_thread(context_area_rm);
+		auto stack_area_rm = noux_connection()->stack_area_rm_session();
+		Genode::env()->reinit_main_thread(stack_area_rm);
 
 		return 0;
 

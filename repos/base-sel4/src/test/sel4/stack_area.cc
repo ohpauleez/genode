@@ -1,5 +1,5 @@
 /*
- * \brief  Dummy context_area helper
+ * \brief  Dummy stack-area helper
  * \author Norman Feske
  * \date   2014-10-14
  */
@@ -16,8 +16,7 @@
 
 namespace Genode {
 
-	Rm_session *env_context_area_rm_session() { return nullptr; }
-
-	Ram_session *env_context_area_ram_session() { return nullptr; }
+	Rm_session  *env_stack_area_rm_session()  { return nullptr; }
+	Ram_session *env_stack_area_ram_session() { return nullptr; }
 }
 

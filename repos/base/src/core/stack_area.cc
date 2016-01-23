@@ -24,22 +24,32 @@
 #include <map_local.h>
 #include <dataspace_component.h>
 
+
+namespace Genode {
+
+	Rm_session  *env_stack_area_rm_session;
+	Ram_session *env_stack_area_ram_session;
+
+	void init_stack_area();
+}
+
+
 using namespace Genode;
 
 
 /**
- * Region-manager session for allocating thread contexts
+ * Region-manager session for allocating stacks
  *
  * This class corresponds to the managed dataspace that is normally
- * used for organizing thread contexts with the thread context area.
+ * used for organizing stacks within the stack area.
  * In contrast to the ordinary implementation, core's version does
  * not split between allocation of memory and virtual memory management.
  * Due to the missing availability of "real" dataspaces and capabilities
- * refering to it without having an entrypoint in place, the allocation
+ * referring to it without having an entrypoint in place, the allocation
  * of a dataspace has no effect, but the attachment of the thereby "empty"
  * dataspace is doing both: allocation and attachment.
  */
-class Context_area_rm_session : public Rm_session
+class Stack_area_rm_session : public Rm_session
 {
 	private:
 
@@ -53,31 +63,35 @@ class Context_area_rm_session : public Rm_session
 	public:
 
 		/**
-		 * Allocate and attach on-the-fly backing store to thread-context area
+		 * Allocate and attach on-the-fly backing store to stack area
 		 */
 		Local_addr attach(Dataspace_capability ds_cap, /* ignored capability */
 		                  size_t size, off_t offset,
 		                  bool use_local_addr, Local_addr local_addr,
 		                  bool executable)
 		{
-			size = round_page(size);
-
 			/* allocate physical memory */
-			Untyped_address const untyped_addr =
-				Untyped_memory::alloc(*platform_specific()->ram_alloc(), size);
-
-			Untyped_memory::convert_to_page_frames(untyped_addr.phys(),
-			                                       size >> get_page_size_log2());
-
-			Dataspace_component *ds = new (&_ds_slab)
-				Dataspace_component(size, 0, untyped_addr.phys(), CACHED, true, 0);
-			if (!ds) {
-				PERR("dataspace for core context does not exist");
+			size = round_page(size);
+			void *phys_base;
+			Range_allocator *ra = platform_specific()->ram_alloc();
+			if (ra->alloc_aligned(size, &phys_base,
+				                  get_page_size_log2()).is_error()) {
+				PERR("could not allocate backing store for new stack");
 				return (addr_t)0;
 			}
 
-			addr_t const core_local_addr =
-				Native_config::context_area_virtual_base() + (addr_t)local_addr;
+			if (verbose)
+				PDBG("phys_base = %p, size = 0x%zx", phys_base, size);
+
+			Dataspace_component *ds = new (&_ds_slab)
+				Dataspace_component(size, 0, (addr_t)phys_base, CACHED, true, 0);
+			if (!ds) {
+				PERR("dataspace for core stack does not exist");
+				return (addr_t)0;
+			}
+
+			addr_t core_local_addr = Native_config::stack_area_virtual_base() +
+			                         (addr_t)local_addr;
 
 			if (verbose)
 				PDBG("core_local_addr = %lx, phys_addr = %lx, size = 0x%zx",
@@ -95,7 +109,21 @@ class Context_area_rm_session : public Rm_session
 			return local_addr;
 		}
 
-		void detach(Local_addr local_addr) { PWRN("Not implemented!"); }
+		void detach(Local_addr local_addr)
+		{
+			using Genode::addr_t;
+
+			if ((addr_t)local_addr >= Native_config::stack_area_virtual_size())
+				return;
+
+			addr_t const detach = Native_config::stack_area_virtual_base() +
+			                      (addr_t)local_addr;
+			addr_t const stack  = Native_config::stack_virtual_size();
+			addr_t const pages  = ((detach & ~(stack - 1)) + stack - detach)
+			                      >> get_page_size_log2();
+
+			unmap_local(detach, pages);
+		}
 
 		Pager_capability add_client(Thread_capability) {
 			return Pager_capability(); }
@@ -110,15 +138,14 @@ class Context_area_rm_session : public Rm_session
 };
 
 
-class Context_area_ram_session : public Ram_session
+class Stack_area_ram_session : public Ram_session
 {
 	public:
 
 		Ram_dataspace_capability alloc(size_t size, Cache_attribute cached) {
 			return reinterpret_cap_cast<Ram_dataspace>(Native_capability()); }
 
-		void free(Ram_dataspace_capability ds) {
-			PWRN("Not implemented!"); }
+		void free(Ram_dataspace_capability ds) { }
 
 		int ref_account(Ram_session_capability ram_session) { return 0; }
 
@@ -131,17 +158,11 @@ class Context_area_ram_session : public Ram_session
 };
 
 
-namespace Genode {
+void Genode::init_stack_area()
+{
+	static Stack_area_rm_session rm;
+	env_stack_area_rm_session = &rm;
 
-	Rm_session  *env_context_area_rm_session;
-	Ram_session *env_context_area_ram_session;
-
-	void init_context_area()
-	{
-		static Context_area_rm_session rm_inst;
-		env_context_area_rm_session = &rm_inst;
-
-		static Context_area_ram_session ram_inst;
-		env_context_area_ram_session = &ram_inst;
-	}
+	static Stack_area_ram_session ram;
+	env_stack_area_ram_session = &ram;
 }
