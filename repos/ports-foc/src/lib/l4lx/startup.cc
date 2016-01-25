@@ -21,9 +21,13 @@
 #include <util/misc_math.h>
 #include <os/config.h>
 
+/* Fiasco.OC-specific Genode includes */
+#include <foc/cap_selectors.h>
+
 /* L4lx includes */
 #include <env.h>
 
+/* Fisco.OC includes */
 namespace Fiasco {
 #include <l4/re/env.h>
 #include <l4/sys/consts.h>

@@ -19,6 +19,10 @@
 #include <vcpu.h>
 #include <l4lx_thread.h>
 
+/* Fiasco.OC-specific Genode includes */
+#include <foc/cap_selectors.h>
+
+/* Fiasco.OC includes */
 namespace Fiasco {
 #include <l4/sys/debugger.h>
 }

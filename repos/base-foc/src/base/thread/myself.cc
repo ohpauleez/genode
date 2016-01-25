@@ -11,7 +11,11 @@
  * under the terms of the GNU General Public License version 2.
  */
 
+/* Genode includes */
 #include <base/thread.h>
+
+/* base-internal includes */
+#include <base/internal/utcb_regs.h>
 
 
 Genode::Thread_base *Genode::Thread_base::myself()

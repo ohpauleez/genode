@@ -22,6 +22,9 @@
 #include <base/native_types.h>
 #include <base/thread.h>
 
+/* Fiasco.OC-specific Genode includes */
+#include <foc/cap_selectors.h>
+
 /* Fiasco.OC includes */
 namespace Fiasco {
 #include <l4/sys/kdebug.h>

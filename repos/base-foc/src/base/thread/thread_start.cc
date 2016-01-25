@@ -19,9 +19,14 @@
 #include <base/sleep.h>
 #include <base/env.h>
 
+/* Fiasco.OC-specific Genode includes */
+#include <foc/cap_selectors.h>
+
 /* base-internal includes */
 #include <base/internal/stack.h>
+#include <base/internal/utcb_regs.h>
 
+/* Fiasco.OC includes */
 namespace Fiasco {
 #include <l4/sys/utcb.h>
 }

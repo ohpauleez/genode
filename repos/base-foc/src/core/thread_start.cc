@@ -18,6 +18,7 @@
 
 /* base-internal includes */
 #include <base/internal/stack.h>
+#include <base/internal/utcb_regs.h>
 
 /* core includes */
 #include <platform.h>

@@ -17,6 +17,9 @@
 /* Genode includes */
 #include <base/native_types.h>
 
+/* Fiasco.OC-specific Genode includes */
+#include <foc/cap_selectors.h>
+
 /* base-internal includes */
 #include <base/internal/crt0.h>
 

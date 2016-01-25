@@ -16,6 +16,9 @@
 #include <base/native_types.h>
 #include <util/misc_math.h>
 
+/* Fiasco.OC-specific Genode includes */
+#include <foc/cap_selectors.h>
+
 /* core includes */
 #include <util.h>
 #include <platform.h>

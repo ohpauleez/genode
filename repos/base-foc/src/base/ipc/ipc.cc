@@ -27,8 +27,12 @@
 #include <base/thread.h>
 #include <util/assert.h>
 
+/* Fiasco.OC-specific Genode includes */
+#include <foc/cap_selectors.h>
+
 /* base-internal includes */
 #include <base/internal/lock_helper.h> /* for 'thread_get_my_native_id()' */
+#include <base/internal/utcb_regs.h>
 
 /* Fiasco.OC includes */
 namespace Fiasco {

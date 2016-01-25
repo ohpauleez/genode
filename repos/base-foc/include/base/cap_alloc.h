@@ -14,10 +14,17 @@
 #ifndef _INCLUDE__BASE__CAP_ALLOC_H_
 #define _INCLUDE__BASE__CAP_ALLOC_H_
 
+/* Genode includes */
 #include <base/cap_map.h>
 #include <base/native_types.h>
 #include <util/assert.h>
 #include <util/construct_at.h>
+
+/* Fiasco.OC-specific Genode includes */
+#include <foc/cap_selectors.h>
+
+/* base-internal includes */
+#include <base/internal/utcb_regs.h>
 
 namespace Genode {
 

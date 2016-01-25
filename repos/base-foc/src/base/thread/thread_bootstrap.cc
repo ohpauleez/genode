@@ -17,6 +17,12 @@
 #include <base/thread.h>
 #include <base/sleep.h>
 
+/* Fiasco.OC-specific Genode includes */
+#include <foc/cap_selectors.h>
+
+/* base-internal includes */
+#include <base/internal/utcb_regs.h>
+
 
 /*****************************
  ** Startup library support **
