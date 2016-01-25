@@ -11,17 +11,16 @@
  * under the terms of the GNU General Public License version 2.
  */
 
-#ifndef _INCLUDE__UTIL__ASSERT_H_
-#define _INCLUDE__UTIL__ASSERT_H_
+#ifndef _INCLUDE__FOC__ASSERT_H_
+#define _INCLUDE__FOC__ASSERT_H_
 
-#include <base/printf.h>
-
+/* Fiasco.OC includes */
 namespace Fiasco {
 #include <l4/sys/kdebug.h>
 }
 
 #if 1
-#define ASSERT(e, s) \
+#define FOC_ASSERT(e, s) \
 	do { if (!(e)) {                               \
 		Fiasco::outstring(ESC_ERR s ESC_END "\n"); \
 		Fiasco::outstring(__FILE__ ":");           \
@@ -31,7 +30,7 @@ namespace Fiasco {
 		}                                          \
 	} while(0)
 #else
-#define ASSERT(e, s)  do { } while (0)
+#define FOC_ASSERT(e, s)  do { } while (0)
 #endif
 
-#endif /* _INCLUDE__UTIL__ASSERT_H_ */
+#endif /* _INCLUDE__FOC__ASSERT_H_ */

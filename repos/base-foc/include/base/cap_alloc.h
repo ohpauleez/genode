@@ -17,11 +17,11 @@
 /* Genode includes */
 #include <base/cap_map.h>
 #include <base/native_types.h>
-#include <util/assert.h>
 #include <util/construct_at.h>
 
 /* Fiasco.OC-specific Genode includes */
 #include <foc/cap_selectors.h>
+#include <foc/assert.h>
 
 /* base-internal includes */
 #include <base/internal/utcb_regs.h>
@@ -86,7 +86,7 @@ namespace Genode {
 						return &_indices[i];
 					}
 				}
-				ASSERT(0, "cap index allocation failed");
+				FOC_ASSERT(0, "cap index allocation failed");
 				return 0;
 			}
 
@@ -101,7 +101,7 @@ namespace Genode {
 				T* obj = reinterpret_cast<T*>(kcap_to_idx(addr));
 
 				if (obj < &_indices[0] || obj >= &_indices[SZ]) {
-					ASSERT(0, "cap index out of bounds");
+					FOC_ASSERT(0, "cap index out of bounds");
 					throw Index_out_of_bounds();
 				}
 
@@ -116,7 +116,7 @@ namespace Genode {
 				for (size_t i = 0; i < cnt; obj++, i++) {
 					/* range check given pointer address */
 					if (obj < &_indices[0] || obj >= &_indices[SZ]) {
-						ASSERT(0, "cap index out of bounds");
+						FOC_ASSERT(0, "cap index out of bounds");
 						throw Index_out_of_bounds();
 					}
 					delete obj;

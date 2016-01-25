@@ -25,10 +25,10 @@
 #include <base/ipc.h>
 #include <base/ipc_msgbuf.h>
 #include <base/thread.h>
-#include <util/assert.h>
 
 /* Fiasco.OC-specific Genode includes */
 #include <foc/cap_selectors.h>
+#include <foc/assert.h>
 
 /* base-internal includes */
 #include <base/internal/lock_helper.h> /* for 'thread_get_my_native_id()' */
@@ -67,7 +67,7 @@ void Ipc_ostream::_marshal_capability(Native_capability const &cap)
 	if (cap.valid())
 		_snd_msg->snd_append_cap_sel(cap.dst());
 
-	ASSERT(!cap.valid() ||
+	FOC_ASSERT(!cap.valid() ||
 	       l4_msgtag_label(l4_task_cap_valid(L4_BASE_TASK_CAP, cap.dst())),
 	       "Send invalid cap");
 }

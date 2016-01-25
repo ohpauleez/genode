@@ -17,7 +17,8 @@
 #include <base/cap_map.h>
 #include <base/native_types.h>
 
-#include <util/assert.h>
+/* Fiasco.OC-specific Genode includes */
+#include <foc/assert.h>
 
 /* base-internal includes */
 #include <base/internal/spin_lock.h>
@@ -98,7 +99,7 @@ Genode::Cap_index* Genode::Capability_map::insert(int id)
 
 	Lock_guard<Spin_lock> guard(_lock);
 
-	ASSERT(!_tree.first() || !_tree.first()->find_by_id(id),
+	FOC_ASSERT(!_tree.first() || !_tree.first()->find_by_id(id),
 	       "Double insertion in cap_map()!");
 
 	Cap_index *i = cap_idx_alloc()->alloc_range(1);

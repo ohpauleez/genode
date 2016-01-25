@@ -11,16 +11,20 @@
  * under the terms of the GNU General Public License version 2.
  */
 
+/* Genode includes */
 #include <base/env.h>
 #include <base/printf.h>
 #include <base/allocator_avl.h>
 #include <block_session/connection.h>
 #include <os/config.h>
-#include <util/assert.h>
+
+/* Fiasco.OC-specific Genode includes */
+#include <foc/assert.h>
 
 #include <vcpu.h>
 #include <linux.h>
 
+/* Fiasco.OC includes */
 namespace Fiasco {
 #include <genode/block.h>
 #include <l4/sys/irq.h>
@@ -62,7 +66,7 @@ namespace {
 			void insert(void *packet, void *request)
 			{
 				int idx = _find(0);
-				ASSERT(idx >= 0, "Req cache full!");
+				FOC_ASSERT(idx >= 0, "Req cache full!");
 
 				_cache[idx] = Req_entry(packet, request);
 			}
@@ -70,7 +74,7 @@ namespace {
 			void remove(void *packet, void **request)
 			{
 				int idx = _find(packet);
-				ASSERT(idx >= 0, "Req cache entry not found!");
+				FOC_ASSERT(idx >= 0, "Req cache entry not found!");
 
 				*request = _cache[idx].req;
 				_cache[idx].pkt = 0;

@@ -17,6 +17,9 @@
 #include <base/cap_alloc.h>
 #include <util/misc_math.h>
 
+/* Fiasco.OC-specific Genode includes */
+#include <foc/assert.h>
+
 /* core includes */
 #include <rpc_cap_factory.h>
 #include <cap_id_alloc.h>
@@ -30,8 +33,6 @@ namespace Fiasco {
 #include <l4/sys/task.h>
 #include <l4/sys/types.h>
 }
-
-#include <util/assert.h>
 
 using namespace Genode;
 
@@ -99,7 +100,7 @@ Native_capability Rpc_cap_factory::alloc(Native_capability ep)
 
 		Core_cap_index* ref = static_cast<Core_cap_index*>(ep.idx());
 
-		ASSERT(ref && ref->pt(), "No valid platform_thread");
+		FOC_ASSERT(ref && ref->pt(), "No valid platform_thread");
 
 		/*
 		 * Allocate new id, and ipc-gate and set id as gate-label
