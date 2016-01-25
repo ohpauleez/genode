@@ -93,9 +93,6 @@ namespace Genode {
 	};
 
 
-	typedef Fiasco::l4_cap_idx_t Native_task;
-
-
 	struct Native_utcb
 	{
 		/*

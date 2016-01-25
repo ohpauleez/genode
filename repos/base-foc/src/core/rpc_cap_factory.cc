@@ -58,7 +58,7 @@ Core_cap_index* Cap_mapping::_get_cap()
 }
 
 
-void Cap_mapping::map(Native_thread_id task)
+void Cap_mapping::map(Fiasco::l4_cap_idx_t task)
 {
 	using namespace Fiasco;
 
