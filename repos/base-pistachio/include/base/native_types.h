@@ -14,7 +14,7 @@
 #ifndef _INCLUDE__BASE__NATIVE_TYPES_H_
 #define _INCLUDE__BASE__NATIVE_TYPES_H_
 
-#include <base/native_capability.h>
+#include <base/native_capability_tpl.h>
 #include <base/stdint.h>
 
 namespace Pistachio {

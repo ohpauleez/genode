@@ -15,7 +15,6 @@
 #define _INCLUDE__BASE__NATIVE_TYPES_H_
 
 #include <base/stdint.h>
-#include <base/native_capability.h>
 
 namespace Genode {
 

@@ -15,7 +15,7 @@
 #define _INCLUDE__BASE__NATIVE_TYPES_H_
 
 #include <util/string.h>
-#include <base/native_capability.h>
+#include <base/native_capability_tpl.h>
 #include <base/stdint.h>
 
 /*
@@ -44,6 +44,7 @@ namespace Genode {
 		Native_thread_id() : tid(0), pid(0) { }
 		Native_thread_id(unsigned int tid, unsigned int pid)
 		: tid(tid), pid(pid) { }
+		/* NOVA-specific Genode includes */
 	};
 
 	struct Thread_meta_data;
