@@ -58,6 +58,7 @@ append_if [have_spec sdl] config {
 			<service name="Input"/>
 			<service name="Framebuffer"/>
 		</provides>
+		<config width="640" height="480"/>
 	</start>}
 
 append_platform_drv_config
@@ -109,6 +110,8 @@ append config {
 
 			<policy label="pointer" domain="pointer"/>
 			<policy domain="default"/>
+
+			<global-key name="KEY_F1" label="wm -> decorator" />
 		</config>
 	</start>
 	<start name="pointer">
@@ -160,6 +163,39 @@ append config {
 				<child name="wm"/> <child name="report_rom"/> <parent/> <any-child/>
 			</any-service>
 		</route>
+		<config>
+			<press key="KEY_F1">
+				<press key="KEY_TAB"              action="next_window">
+					<release key="KEY_TAB">
+						<release key="KEY_F1"     action="raise_window"/>
+					</release>
+				</press>
+				<press key="KEY_LEFTSHIFT">
+					<press key="KEY_TAB"          action="prev_window">
+						<release key="KEY_TAB">
+							<release key="KEY_F1" action="raise_window"/>
+						</release>
+					</press>
+				</press>
+				<press key="KEY_ENTER" action="toggle_fullscreen"/>
+				<press key="KEY_Q"     action="close"/>
+				<press key="KEY_DOT"   action="next_workspace"/>
+				<press key="KEY_COMMA" action="prev_workspace"/>
+				<press key="KEY_M"     action="mark"/>
+				<press key="KEY_D"     action="detach"/>
+				<press key="KEY_A"     action="attach"/>
+				<press key="KEY_C"     action="column"/>
+				<press key="KEY_R"     action="row"/>
+				<press key="KEY_X"     action="remove"/>
+				<press key="KEY_L"     action="next_column"/>
+				<press key="KEY_H"     action="prev_column"/>
+				<press key="KEY_J"     action="next_row"/>
+				<press key="KEY_K"     action="prev_row"/>
+				<press key="KEY_P"     action="next_tab"/>
+				<press key="KEY_O"     action="prev_tab"/>
+				<press key="KEY_SPACE" action="toogle_overlay"/>
+			</press>
+		</config>
 	</start>
 	<start name="decorator" priority="-1">
 		<binary name="themed_decorator"/>
