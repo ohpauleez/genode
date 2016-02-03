@@ -21,6 +21,7 @@
 
 /* core includes */
 #include <util.h>
+#include <cap_sel_alloc.h>
 
 namespace Genode { class Page_table_registry; }
 
@@ -172,8 +173,10 @@ class Genode::Page_table_registry
 		 * \param addr  virtual address
 		 * \param sel   page-table selector
 		 */
-		void insert_page_table(addr_t addr, unsigned sel)
+		void insert_page_table(addr_t addr, Cap_sel sel)
 		{
+			/* XXX sel is unused */
+
 			if (_page_table_exists(addr)) {
 				PWRN("trying to insert page table for 0x%lx twice", addr);
 				return;

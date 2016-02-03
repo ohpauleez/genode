@@ -94,7 +94,7 @@ namespace {
 
 Native_capability Capability_space::create_ep_cap(Thread_base &ep_thread)
 {
-	unsigned const ep_sel = ep_thread.tid().ep_sel;
+	Cap_sel const ep_sel = Cap_sel(ep_thread.tid().ep_sel);
 
 	Native_capability::Data &data =
 		local_capability_space().create_capability(ep_sel, Rpc_obj_key());
