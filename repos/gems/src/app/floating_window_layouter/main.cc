@@ -397,19 +397,9 @@ void Floating_window_layouter::Main::import_window_list(Xml_node window_list_xml
 
 void Floating_window_layouter::Main::generate_window_layout_model()
 {
-	Window_id const exclusive_window_id =
-		focused_window_is_maximized() ? _user_state.focused_window_id() : Window_id();
-
 	Reporter::Xml_generator xml(window_layout_reporter, [&] ()
 	{
 		for (Window *w = windows.first(); w; w = w->next()) {
-
-			/*
-			 * In the presence of a focused maximized window, omit all other
-			 * windows from the layout.
-			 */
-			if (exclusive_window_id.valid() && w->id() != exclusive_window_id)
-				continue;
 
 			bool const is_hovered = w->has_id(_user_state.hover_state().window_id);
 			bool const is_focused = w->has_id(_user_state.focused_window_id());
