@@ -296,6 +296,10 @@ class Floating_window_layouter::Window : public List<Window>::Element
 
 		void drag(Window::Element element, Point clicked, Point curr)
 		{
+			/* prevent maximized windows from being dragged */
+			if (is_maximized())
+				return;
+
 			if (!_is_dragged)
 				_initiate_drag_operation(element);
 
