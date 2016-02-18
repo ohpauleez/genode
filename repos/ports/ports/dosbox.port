@@ -2,7 +2,7 @@ LICENSE   := GPLv2
 VERSION   := svn
 DOWNLOADS := dosbox.svn
 
-URL(dosbox) := http://svn.code.sf.net/p/dosbox/code-0/dosbox/trunk
+URL(dosbox) := https://svn.code.sf.net/p/dosbox/code-0/dosbox/trunk
 DIR(dosbox) := src/app/dosbox
 REV(dosbox) := 3837
 
