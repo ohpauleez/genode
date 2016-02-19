@@ -2,7 +2,7 @@ LICENSE   := GPLv2
 VERSION   := svn-220
 DOWNLOADS := fuse-ext2.svn
 
-URL(fuse-ext2) := http://svn.code.sf.net/p/fuse-ext2/code/branch/renzo
+URL(fuse-ext2) := https://svn.code.sf.net/p/fuse-ext2/code/branch/renzo
 REV(fuse-ext2) := 220
 DIR(fuse-ext2) := src/lib/fuse-ext2
 
