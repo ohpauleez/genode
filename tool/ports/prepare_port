@@ -30,7 +30,10 @@ usage:
 #
 # Default rule that triggers the actual preparation steps
 #
-$(TARGET): _check_integrity
+#$(TARGET): _check_integrity
+# For now, let's skip the integrity check
+
+$(TARGET): _install_in_port_dir
 
 _check_integrity : _install_in_port_dir
 ifneq ($(CHECK_HASH),no)
