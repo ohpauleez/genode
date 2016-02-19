@@ -64,11 +64,12 @@ sudo tar xPfj ../genode-toolchain-15.05-x86_64.tar.bz2
 ## vim build.nova64/etc/build.conf
 ##
 ## Uncomment all repos; :wq
-## Then from scratch/genode-ohpauleez/build.nova64 ; make run/vbox_linux
-## The image will be at: build.nova64/var/run/vbox_linux.iso
+## Then from scratch/genode-ohpauleez/build.nova64 ; make run/turmvilla
+## The image will be at: build.nova64/var/run/turmvilla.iso
 ##
-## Copy the image out: cp build.nova64/var/run/vbox_linux.iso /vagrant
-## Copy build.nova64/var/run/vbox_linux into the shared folder: cp -R var/run/vbox_linux /vagrant
-## mv /vagrant/vbox_linux /vagrant/genode
+## Copy the image out: cp build.nova64/var/run/turmvilla.iso /vagrant
 ## Logout of the vagrant image and halt it.
+##
+## Optionally above, you can build the very base image with run/vbox_linux
+##  - that image would be at: build.nova64/var/run/vbox_linux.iso
 
