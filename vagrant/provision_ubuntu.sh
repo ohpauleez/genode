@@ -27,7 +27,6 @@ sudo apt-get -y -q install flex bison byacc
 mkdir scratch
 cd scratch
 wget --progress=bar:force --output-document genode-toolchain-15.05-x86_64.tar.bz2 http://downloads.sourceforge.net/project/genode/genode-toolchain/15.05/genode-toolchain-15.05-x86_64.tar.bz2?r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Fgenode%2Ffiles%2Fgenode-toolchain%2F15.05%2F&ts=1455810960&use_mirror=iweb
-sudo tar xPfj genode-toolchain-15.05-x86_64.tar.bz2
 
 # Get N. Feske's Genode patchset, which will give use the day-to-day setup base
 git clone https://github.com/ohpauleez/genode.git genode-ohpauleez
@@ -36,14 +35,21 @@ git checkout turmvilla
 cd repos/base-nova
 make prepare PKG=x86emu
 cd ../dde_linux
-make prepare
+make prepare PKG=x86emu
 cd ../dde_rump
 make prepare
-cd ../libports
+cd ../dde_ipxe
+make prepare
+cd ../dde_bsd
+make prepare PKG=x86emu
+cd ../libports PKG=x86emu
 make prepare
 cd ../ports
 make prepare
 cd ../..
+
+# Prepare the tools and build dir
+sudo tar xPfj ../genode-toolchain-15.05-x86_64.tar.bz2
 ./tool/create_builddir nova_x86_64 BUILD_DIR=build.nova64
 
 ##  Continuing the build yourself
@@ -51,11 +57,9 @@ cd ../..
 ## You'll now need to edit your build.nova64 to turn on all REPOSITORY settings
 ## you want.
 ## vagrant ssh
-## echo "You may need to run the 'tar' command for the toolchain"
-## echo "You may also have to patch up and prepare libports/ports again; Subversion URLs must be HTTPS in here"
 ## cd scratch/genode-ohpauleez
-## vi build.nova64/etc/build.conf
+## vim build.nova64/etc/build.conf
 ##
-## Uncomment all repos from libports to gems; :wq
+## Uncomment all repos; :wq
 ## Then from scratch/genode-ohpauleez/build.nova64 ; make run/vbox_linux
 
