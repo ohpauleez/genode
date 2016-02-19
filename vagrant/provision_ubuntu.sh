@@ -22,6 +22,7 @@ sudo apt-get -y -q install yasm iasl unzip
 sudo apt-get -y -q install tree
 sudo apt-get -y -q install expect
 sudo apt-get -y -q install flex bison byacc
+sudo apt-get -y -q install qemu virtualbox vagrant
 
 # Get the Genode toolchain setup
 mkdir scratch
