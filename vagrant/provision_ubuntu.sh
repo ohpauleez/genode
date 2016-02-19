@@ -24,6 +24,7 @@ sudo apt-get -y -q install expect
 sudo apt-get -y -q install flex bison byacc
 sudo apt-get -y -q install genisoimage syslinux syslinux-utils
 sudo apt-get -y -q install qemu qemu-system-x86 virtualbox vagrant
+sudo apt-get -y -q install virtualbox-dkms virtualbox-qt xserver-xorg xinit
 
 # Get the Genode toolchain setup
 mkdir scratch
@@ -64,4 +65,9 @@ sudo tar xPfj ../genode-toolchain-15.05-x86_64.tar.bz2
 ##
 ## Uncomment all repos; :wq
 ## Then from scratch/genode-ohpauleez/build.nova64 ; make run/vbox_linux
+## The image will be at: build.nova64/var/run/vbox_linux.iso
+##
+## Copy build.nova64/var/run/vbox_linux into the shared folder: cp -R var/run/vbox_linux /vagrant
+## mv /vagrant/vbox_linux /vagrant/genode
+## Logout of the vagrant image and halt it.
 
