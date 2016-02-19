@@ -1,8 +1,8 @@
 LICENSE   := netperf
-VERSION   := 2.6.0
-DOWNLOADS := netperf.svn
+VERSION   := 2.7.0
+DOWNLOADS := netperf.git
 
-URL(netperf) := http://www.netperf.org/svn/netperf2/tags/netperf-$(VERSION)
+URL(netperf) := https://android.googlesource.com/platform/external/netperf
 REV(netperf) := HEAD
 DIR(netperf) := src/app/netperf
 
