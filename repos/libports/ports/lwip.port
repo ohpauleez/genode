@@ -2,7 +2,9 @@ LICENSE   := BSD
 VERSION   := git
 DOWNLOADS := lwip.git window_scaling_patch.file
 
-URL(lwip) := git://git.savannah.nongnu.org/lwip.git
+# savannah git servers have been down for a bit; Using a mostly acceptable fork
+#URL(lwip) := git://git.savannah.nongnu.org/lwip.git
+URL(lwip) := https://github.com/tabascoeye/lwip.git
 REV(lwip) := fe63f36656bd66b4051bdfab93e351a584337d7c
 DIR(lwip) := src/lib/lwip
 
