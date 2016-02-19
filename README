@@ -72,3 +72,14 @@ mailing list. Please feel welcome to join in!
 
   [http://genode.org/community/mailing-lists]
 
+
+
+
+Setting up a usable environment
+#################################
+
+git checkout turmvilla
+cd vagrant
+vagrant up
+# Follow the directions in the footer of provision_ubuntu.sh
+
